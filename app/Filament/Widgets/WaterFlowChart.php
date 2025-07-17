@@ -4,93 +4,75 @@ namespace App\Filament\Widgets;
 
 use App\Models\SensorData;
 use Filament\Widgets\ChartWidget;
+use Carbon\Carbon;
 
 class WaterFlowChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Debit Air (24 Jam Terakhir)';
-    
-    protected static ?int $sort = 3;
-
-    protected function getData(): array
-    {
-        // Ambil data 24 jam terakhir
-        $data = SensorData::with('device')
-            ->where('recorded_at', '>=', now()->subHours(24))
-            ->orderBy('recorded_at', 'asc')
-            ->get();
-
-        // Jika tidak ada data, return array kosong
-        if ($data->isEmpty()) {
-            return [
-                'datasets' => [],
-                'labels' => [],
-            ];
-        }
-
-        return [
-            'datasets' => [
-                [
-                    'label' => 'Debit Air (L/jam)',
-                    'data' => $data->pluck('water_flow')->toArray(),
-                    'borderColor' => '#06b6d4',
-                    'backgroundColor' => 'rgba(6, 182, 212, 0.1)',
-                    'fill' => true,
-                    'tension' => 0.1,
-                ],
-            ],
-            'labels' => $data->map(function ($item) {
-                return \Carbon\Carbon::parse($item->recorded_at)->format('H:i');
-            })->toArray(),
-        ];
-    }
+    protected static ?string $heading = 'Water Flow Rate (L/h)';
+    protected static ?int $sort = 6;
+    protected int | string | array $columnSpan = 'half';
 
     protected function getType(): string
     {
         return 'line';
     }
 
+    protected function getData(): array
+    {
+        // Ambil data 7 hari terakhir
+        $data = SensorData::where('recorded_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('recorded_at')
+            ->get()
+            ->groupBy(function ($item) {
+                return Carbon::parse($item->recorded_at)->format('Y-m-d');
+            })
+            ->map(function ($dayData) {
+                return $dayData->avg('water_flow');
+            });
+
+        $labels = $data->keys()->toArray();
+        $values = $data->values()->toArray();
+
+        return [
+            'datasets' => [
+                [
+                    'label' => 'Average Water Flow',
+                    'data' => $values,
+                    'backgroundColor' => 'rgba(54, 162, 235, 0.2)',
+                    'borderColor' => 'rgba(54, 162, 235, 1)',
+                    'borderWidth' => 2,
+                    'fill' => true,
+                ]
+            ],
+            'labels' => array_map(function($date) {
+                return Carbon::parse($date)->format('M d');
+            }, $labels),
+        ];
+    }
+
     protected function getOptions(): array
     {
         return [
-            'responsive' => true,
-            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                ],
+            ],
             'scales' => [
                 'y' => [
-                    'type' => 'linear',
-                    'display' => true,
-                    'position' => 'left',
+                    'beginAtZero' => true,
                     'title' => [
                         'display' => true,
-                        'text' => 'Debit Air (L/jam)'
+                        'text' => 'Flow Rate (L/h)'
                     ]
                 ],
                 'x' => [
                     'title' => [
                         'display' => true,
-                        'text' => 'Waktu'
+                        'text' => 'Date'
                     ]
                 ]
             ],
-            'plugins' => [
-                'legend' => [
-                    'display' => true,
-                    'position' => 'top'
-                ],
-                'tooltip' => [
-                    'mode' => 'index',
-                    'intersect' => false
-                ]
-            ],
-            'interaction' => [
-                'mode' => 'nearest',
-                'axis' => 'x',
-                'intersect' => false
-            ]
         ];
-    }
-
-    public function getColumnSpan(): int | string | array
-    {
-        return '1/2';
     }
 }

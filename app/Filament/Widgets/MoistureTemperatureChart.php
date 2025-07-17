@@ -11,6 +11,8 @@ class MoistureTemperatureChart extends ChartWidget
     protected static ?string $heading = 'Grafik Kelembaban dan Suhu (24 Jam Terakhir)';
     
     protected static ?int $sort = 2;
+    protected int | string | array $columnSpan = 'full';
+
 
     protected function getData(): array
     {
@@ -102,10 +104,5 @@ class MoistureTemperatureChart extends ChartWidget
                 'intersect' => false
             ]
         ];
-    }
-
-    public function getColumnSpan(): int | string | array
-    {
-        return '1/2';
     }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\MoistureTemperatureChart;
-use App\Filament\Widgets\SensorDataChart;
+use App\Filament\Widgets\SensorDataBarChart;
 use App\Filament\Widgets\SensorStatsOverview;
+use App\Filament\Widgets\TemperatureChart;
+use App\Filament\Widgets\HumidityChart;
+use App\Filament\Widgets\SoilMoistureChart;
 use App\Filament\Widgets\WaterFlowChart;
+use App\Filament\Widgets\RealtimeStatusChart;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -44,10 +47,13 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
-                // SensorDataChart::class,
                 SensorStatsOverview::class,
-                MoistureTemperatureChart::class,
+                SensorDataBarChart::class,
+                TemperatureChart::class,
+                HumidityChart::class,
+                SoilMoistureChart::class,
                 WaterFlowChart::class,
+                RealtimeStatusChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,

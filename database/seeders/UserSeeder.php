@@ -17,6 +17,15 @@ class UserSeeder extends Seeder
         DB::table('users')->insert([
             [
                 'name' => 'Admin',
+                'email' => 'admin@example.com',  // Sesuai dengan .env MQTT
+                'email_verified_at' => now(),
+                'role' => 'admin',
+                'password' => Hash::make('password'),  // Sesuai dengan .env MQTT
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Admin Smart Irrigation',
                 'email' => 'admin@smartirrigation.com',
                 'email_verified_at' => now(),
                 'role' => 'admin',
