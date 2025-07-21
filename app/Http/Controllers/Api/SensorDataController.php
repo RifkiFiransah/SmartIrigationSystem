@@ -8,6 +8,7 @@ use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class SensorDataController extends Controller
 {
@@ -143,6 +144,159 @@ class SensorDataController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete sensor data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get latest sensor readings for frontend display
+     */
+    public function latest(Request $request): JsonResponse
+    {
+        try {
+            $latest = SensorData::with('device')
+                ->orderBy('recorded_at', 'desc')
+                ->first();
+
+            if (!$latest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No sensor data available'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Latest sensor data retrieved successfully',
+                'data' => $latest
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve latest sensor data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get hourly sensor data for charts
+     */
+    public function hourlyData(Request $request): JsonResponse
+    {
+        try {
+            $hours = $request->input('hours', 24);
+            
+            $data = SensorData::select(
+                DB::raw('HOUR(recorded_at) as hour'),
+                DB::raw('DATE(recorded_at) as date'),
+                DB::raw('AVG(temperature) as avg_temperature'),
+                DB::raw('AVG(humidity) as avg_humidity'),
+                DB::raw('AVG(soil_moisture) as avg_soil_moisture'),
+                DB::raw('AVG(water_flow) as avg_water_flow'),
+                DB::raw('COUNT(*) as reading_count')
+            )
+            ->where('recorded_at', '>=', now()->subHours($hours))
+            ->groupBy(DB::raw('DATE(recorded_at)'), DB::raw('HOUR(recorded_at)'))
+            ->orderBy('date')
+            ->orderBy('hour')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hourly sensor data retrieved successfully',
+                'data' => $data,
+                'period' => "{$hours} hours"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve hourly data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get daily sensor data for weekly charts
+     */
+    public function dailyData(Request $request): JsonResponse
+    {
+        try {
+            $days = $request->input('days', 7);
+            
+            $data = SensorData::select(
+                DB::raw('DATE(recorded_at) as date'),
+                DB::raw('AVG(temperature) as avg_temperature'),
+                DB::raw('AVG(humidity) as avg_humidity'),
+                DB::raw('AVG(soil_moisture) as avg_soil_moisture'),
+                DB::raw('AVG(water_flow) as avg_water_flow'),
+                DB::raw('MIN(temperature) as min_temperature'),
+                DB::raw('MAX(temperature) as max_temperature'),
+                DB::raw('COUNT(*) as reading_count')
+            )
+            ->where('recorded_at', '>=', now()->subDays($days))
+            ->groupBy(DB::raw('DATE(recorded_at)'))
+            ->orderBy('date')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Daily sensor data retrieved successfully',
+                'data' => $data,
+                'period' => "{$days} days"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve daily data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get latest sensor readings per device for node monitoring
+     */
+    public function latestPerDevice(Request $request): JsonResponse
+    {
+        try {
+            $latestPerDevice = DB::table('sensor_data as sd1')
+                ->select([
+                    'sd1.device_id',
+                    'devices.device_name',
+                    'devices.location',
+                    'sd1.temperature',
+                    'sd1.humidity', 
+                    'sd1.soil_moisture',
+                    'sd1.water_flow',
+                    'sd1.status',
+                    'sd1.recorded_at'
+                ])
+                ->join('devices', 'devices.id', '=', 'sd1.device_id')
+                ->whereRaw('sd1.recorded_at = (
+                    SELECT MAX(sd2.recorded_at) 
+                    FROM sensor_data sd2 
+                    WHERE sd2.device_id = sd1.device_id
+                )')
+                ->where('devices.is_active', true)
+                ->orderBy('sd1.device_id')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Latest sensor data per device retrieved successfully',
+                'data' => $latestPerDevice
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve latest sensor data per device',
                 'error' => $e->getMessage()
             ], 500);
         }

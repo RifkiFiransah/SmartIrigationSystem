@@ -66,12 +66,12 @@ class SensorDataSeeder extends Seeder
     {
         // Critical conditions
         if ($temperature > 38 || $temperature < 5 || $soilMoisture < 15) {
-            return 'critical';
+            return 'kritis';
         }
         
         // Alert conditions
         if ($temperature > 35 || $temperature < 10 || $soilMoisture < 25 || $humidity > 90) {
-            return 'alert';
+            return 'peringatan';
         }
         
         // Normal conditions

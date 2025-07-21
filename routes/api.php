@@ -14,6 +14,12 @@ Route::get('/auth/profile', [AuthController::class, 'profile'])->middleware('aut
 // ===== SENSOR DATA ROUTES (DENGAN AUTH) =====
 Route::apiResource('/sensor-readings', SensorDataController::class)->middleware('auth:sanctum');
 
+// ===== PUBLIC SENSOR DATA ROUTES (FOR FRONTEND) =====
+Route::get('/sensor-readings/latest', [SensorDataController::class, 'latest']);
+Route::get('/sensor-readings/latest-per-device', [SensorDataController::class, 'latestPerDevice']);
+Route::get('/sensor-readings/hourly', [SensorDataController::class, 'hourlyData']);
+Route::get('/sensor-readings/daily', [SensorDataController::class, 'dailyData']);
+
 // ===== DATA MANAGEMENT ROUTES =====
 Route::prefix('data')->middleware('auth:sanctum')->group(function () {
     Route::delete('/clear', [DataManagementController::class, 'clearSensorData']);
@@ -24,11 +30,11 @@ Route::prefix('data')->middleware('auth:sanctum')->group(function () {
 // ===== USER ROUTE =====
 Route::get('/user', function (Request $request) {
     return $request->user();
-    // return response()->json([
-    //     'success' => true,
-    //     'message' => 'User profile retrieved successfully',
-    //     'data' => [
-    //         'user' => $request->user(),
-    //     ]
-    // ]);
+    return response()->json([
+        'success' => true,
+        'message' => 'User profile retrieved successfully',
+        'data' => [
+            'user' => $request->user(),
+        ]
+    ]);
 })->middleware('auth:sanctum');
