@@ -456,8 +456,8 @@
                         await this.initTemperatureChart();
                         await this.initHumidityChart();
                         await this.initSoilMoistureChart();
-                        this.initStatusChart();
                         await this.initWeeklyChart();
+                        await this.initStatusChart(); // Initialize after device data is loaded
                     },
 
                     async initTemperatureChart() {
@@ -553,15 +553,18 @@
                         });
                     },
 
-                    initStatusChart() {
+                    async initStatusChart() {
                         const ctx = document.getElementById('statusChart').getContext('2d');
+                        
+                        // Get real status data from devices or use sample data
+                        const statusData = await this.getSystemStatusData();
                         
                         this.charts.status = new Chart(ctx, {
                             type: 'doughnut',
                             data: {
                                 labels: ['Normal', 'Peringatan', 'Kritis'],
                                 datasets: [{
-                                    data: [70, 20, 10],
+                                    data: [statusData.normal, statusData.peringatan, statusData.kritis],
                                     backgroundColor: [
                                         'rgba(34, 197, 94, 0.8)',
                                         'rgba(251, 191, 36, 0.8)',
@@ -579,10 +582,48 @@
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: {
-                                    legend: { position: 'bottom', labels: { boxWidth: 12 } }
+                                    legend: { 
+                                        position: 'bottom', 
+                                        labels: { boxWidth: 12 }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         });
+                    },
+
+                    async getSystemStatusData() {
+                        try {
+                            // Try to get real status data from API
+                            const response = await fetch('/api/sensor-readings/latest-per-device');
+                            const data = await response.json();
+                            
+                            if (data.success && data.data && data.data.length > 0) {
+                                const statusCount = { normal: 0, peringatan: 0, kritis: 0 };
+                                
+                                data.data.forEach(device => {
+                                    const status = this.mapApiStatus(device.status, device);
+                                    if (statusCount.hasOwnProperty(status)) {
+                                        statusCount[status]++;
+                                    }
+                                });
+                                
+                                return statusCount;
+                            }
+                        } catch (error) {
+                            console.error('Error fetching status data:', error);
+                        }
+                        
+                        // Fallback to sample data
+                        return { normal: 2, peringatan: 1, kritis: 0 };
                     },
 
                     async initWeeklyChart() {
@@ -601,32 +642,91 @@
                                         data: chartData.temperature,
                                         backgroundColor: 'rgba(239, 68, 68, 0.7)',
                                         borderColor: 'rgb(239, 68, 68)',
-                                        borderWidth: 1
+                                        borderWidth: 1,
+                                        yAxisID: 'y'
                                     },
                                     {
                                         label: 'Kelembapan (%)',
                                         data: chartData.humidity,
                                         backgroundColor: 'rgba(6, 182, 212, 0.7)',
                                         borderColor: 'rgb(6, 182, 212)',
-                                        borderWidth: 1
+                                        borderWidth: 1,
+                                        yAxisID: 'y1'
                                     },
                                     {
                                         label: 'Kelembapan Tanah (%)',
                                         data: chartData.soilMoisture,
                                         backgroundColor: 'rgba(34, 197, 94, 0.7)',
                                         borderColor: 'rgb(34, 197, 94)',
-                                        borderWidth: 1
+                                        borderWidth: 1,
+                                        yAxisID: 'y1'
                                     }
                                 ]
                             },
                             options: {
                                 responsive: true,
                                 maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false,
+                                },
                                 plugins: {
-                                    legend: { position: 'top', labels: { boxWidth: 12 } }
+                                    legend: { 
+                                        position: 'top', 
+                                        labels: { boxWidth: 12 }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                let label = context.dataset.label || '';
+                                                if (label) {
+                                                    label += ': ';
+                                                }
+                                                label += context.parsed.y.toFixed(1);
+                                                if (context.dataset.label === 'Suhu (°C)') {
+                                                    label += '°C';
+                                                } else {
+                                                    label += '%';
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    }
                                 },
                                 scales: {
-                                    y: { beginAtZero: true }
+                                    x: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Hari'
+                                        }
+                                    },
+                                    y: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'left',
+                                        title: {
+                                            display: true,
+                                            text: 'Suhu (°C)'
+                                        },
+                                        beginAtZero: false,
+                                        min: 15,
+                                        max: 35
+                                    },
+                                    y1: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'right',
+                                        title: {
+                                            display: true,
+                                            text: 'Kelembapan (%)'
+                                        },
+                                        beginAtZero: true,
+                                        max: 100,
+                                        grid: {
+                                            drawOnChartArea: false,
+                                        },
+                                    }
                                 }
                             }
                         });
@@ -638,7 +738,10 @@
                             const result = await response.json();
                             
                             if (result.success && result.data.length > 0) {
-                                const labels = result.data.map(item => `${item.hour.toString().padStart(2, '0')}:00`);
+                                const labels = result.data.map(item => {
+                                    const hour = item.hour.toString().padStart(2, '0');
+                                    return `${hour}:00`;
+                                });
                                 let data;
                                 
                                 switch(metric) {
@@ -661,19 +764,42 @@
                             console.error('Error fetching hourly data:', error);
                         }
                         
-                        // Fallback to sample data
-                        const hours = Array.from({length: 12}, (_, i) => `${(i * 2).toString().padStart(2, '0')}:00`);
+                        // Fallback to sample data with more realistic patterns
+                        const now = new Date();
+                        const hours = Array.from({length: 12}, (_, i) => {
+                            const hourAgo = new Date(now.getTime() - ((11 - i) * 60 * 60 * 1000));
+                            return hourAgo.getHours().toString().padStart(2, '0') + ':00';
+                        });
+                        
                         let sampleData;
                         
                         switch(metric) {
                             case 'temperature':
-                                sampleData = hours.map(() => Math.random() * 15 + 20);
+                                // Temperature varies based on time of day
+                                sampleData = hours.map((hour, i) => {
+                                    const baseTemp = 25;
+                                    const timeVariation = Math.sin((i / 12) * Math.PI * 2) * 5;
+                                    const randomVariation = (Math.random() - 0.5) * 3;
+                                    return Math.max(15, Math.min(35, baseTemp + timeVariation + randomVariation));
+                                });
                                 break;
                             case 'humidity':
-                                sampleData = hours.map(() => Math.random() * 40 + 40);
+                                // Humidity tends to be higher at night
+                                sampleData = hours.map((hour, i) => {
+                                    const baseHumidity = 60;
+                                    const timeVariation = Math.cos((i / 12) * Math.PI * 2) * 15;
+                                    const randomVariation = (Math.random() - 0.5) * 10;
+                                    return Math.max(30, Math.min(90, baseHumidity + timeVariation + randomVariation));
+                                });
                                 break;
                             case 'soil_moisture':
-                                sampleData = hours.map(() => Math.random() * 50 + 25);
+                                // Soil moisture changes more gradually
+                                sampleData = hours.map((hour, i) => {
+                                    const baseMoisture = 45;
+                                    const gradualChange = i * 0.5; // Slight decrease over time
+                                    const randomVariation = (Math.random() - 0.5) * 5;
+                                    return Math.max(20, Math.min(80, baseMoisture - gradualChange + randomVariation));
+                                });
                                 break;
                             default:
                                 sampleData = hours.map(() => Math.random() * 10);
@@ -690,7 +816,7 @@
                             if (result.success && result.data.length > 0) {
                                 const labels = result.data.map(item => {
                                     const date = new Date(item.date);
-                                    return date.toLocaleDateString('en-US', { weekday: 'short' });
+                                    return date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
                                 });
                                 
                                 const temperature = result.data.map(item => parseFloat(item.avg_temperature || 0));
@@ -703,13 +829,13 @@
                             console.error('Error fetching daily data:', error);
                         }
                         
-                        // Fallback to sample data
-                        const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                        // Fallback to sample data with realistic values
+                        const days = ['Sen 21', 'Sel 22', 'Rab 23', 'Kam 24', 'Jum 25', 'Sab 26', 'Min 27'];
                         return {
                             labels: days,
-                            temperature: days.map(() => Math.random() * 15 + 20),
-                            humidity: days.map(() => Math.random() * 40 + 40),
-                            soilMoisture: days.map(() => Math.random() * 50 + 25)
+                            temperature: [25.2, 26.8, 24.1, 27.3, 25.9, 23.4, 26.5],
+                            humidity: [65.3, 58.7, 72.1, 55.9, 61.2, 68.5, 59.8],
+                            soilMoisture: [45.2, 42.1, 48.7, 39.3, 51.2, 47.8, 44.5]
                         };
                     },
 
@@ -887,6 +1013,13 @@
                             this.charts.weekly.data.datasets[1].data = weeklyData.humidity;
                             this.charts.weekly.data.datasets[2].data = weeklyData.soilMoisture;
                             this.charts.weekly.update();
+                        }
+                        
+                        // Update status chart
+                        if (this.charts.status) {
+                            const statusData = await this.getSystemStatusData();
+                            this.charts.status.data.datasets[0].data = [statusData.normal, statusData.peringatan, statusData.kritis];
+                            this.charts.status.update();
                         }
                     }
                 }
