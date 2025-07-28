@@ -8,64 +8,90 @@ use Filament\Widgets\ChartWidget;
 
 class MoistureTemperatureChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Kelembaban dan Suhu (24 Jam Terakhir)';
+    protected static ?string $heading = 'Grafik Data Sensor (24 Jam Terakhir)';
     
     protected static ?int $sort = 2;
     protected int | string | array $columnSpan = 'full';
 
-
     protected function getData(): array
     {
-        // Ambil data 24 jam terakhir
+        // Ambil data 24 jam terakhir dengan interval yang lebih teratur
         $data = SensorData::with('device')
             ->where('recorded_at', '>=', now()->subHours(24))
             ->orderBy('recorded_at', 'asc')
             ->get();
 
-        // Jika tidak ada data, return array kosong
+        // Jika tidak ada data, return array kosong dengan pesan
         if ($data->isEmpty()) {
             return [
-                'datasets' => [],
-                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'No Data Available',
+                        'data' => [0],
+                        'backgroundColor' => '#6b7280',
+                    ]
+                ],
+                'labels' => ['No Data'],
             ];
         }
+
+        // Group data by 2-hour intervals untuk mengurangi kepadatan
+        $groupedData = $data->groupBy(function ($item) {
+            $hour = \Carbon\Carbon::parse($item->recorded_at)->hour;
+            // Group by 2-hour intervals
+            $interval = floor($hour / 2) * 2;
+            return sprintf('%02d:00', $interval);
+        })->map(function ($hourData) {
+            return [
+                'temperature' => round($hourData->avg('temperature'), 1),
+                'humidity' => round($hourData->avg('humidity'), 1),
+                'soil_moisture' => round($hourData->avg('soil_moisture'), 1),
+                'water_flow' => round($hourData->avg('water_flow'), 1),
+                'time' => $hourData->first()->recorded_at,
+            ];
+        })->values();
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Suhu (°C)',
-                    'data' => $data->pluck('temperature')->toArray(),
+                    'label' => 'Temperature (°C)',
+                    'data' => $groupedData->pluck('temperature')->toArray(),
+                    'backgroundColor' => '#ef4444',
                     'borderColor' => '#ef4444',
-                    'backgroundColor' => 'rgba(239, 68, 68, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.1,
+                    'borderWidth' => 0,
                 ],
                 [
-                    'label' => 'Kelembaban (%)',
-                    'data' => $data->pluck('humidity')->toArray(),
+                    'label' => 'Humidity (%)',
+                    'data' => $groupedData->pluck('humidity')->toArray(),
+                    'backgroundColor' => '#3b82f6',
                     'borderColor' => '#3b82f6',
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.1,
+                    'borderWidth' => 0,
                 ],
                 [
-                    'label' => 'Kelembaban Tanah (%)',
-                    'data' => $data->pluck('soil_moisture')->toArray(),
+                    'label' => 'Soil Moisture (%)',
+                    'data' => $groupedData->pluck('soil_moisture')->toArray(),
+                    'backgroundColor' => '#10b981',
                     'borderColor' => '#10b981',
-                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.1,
+                    'borderWidth' => 0,
+                ],
+                [
+                    'label' => 'Water Flow (L/h)',
+                    'data' => $groupedData->pluck('water_flow')->toArray(),
+                    'backgroundColor' => '#8b5cf6',
+                    'borderColor' => '#8b5cf6',
+                    'borderWidth' => 0,
+                    'yAxisID' => 'y1',
                 ],
             ],
-            'labels' => $data->map(function ($item) {
-                return \Carbon\Carbon::parse($item->recorded_at)->format('H:i');
+            'labels' => $groupedData->map(function ($item) {
+                return \Carbon\Carbon::parse($item['time'])->format('H:i');
             })->toArray(),
         ];
     }
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 
     protected function getOptions(): array
@@ -73,36 +99,126 @@ class MoistureTemperatureChart extends ChartWidget
         return [
             'responsive' => true,
             'maintainAspectRatio' => false,
-            'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Nilai Sensor'
-                    ]
-                ],
-                'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Waktu'
-                    ]
-                ]
-            ],
             'plugins' => [
                 'legend' => [
                     'display' => true,
-                    'position' => 'top'
+                    'position' => 'top',
+                    'align' => 'center',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'pointStyle' => 'rect',
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'color' => '#9ca3af',
+                        'padding' => 20,
+                        'boxWidth' => 12,
+                        'boxHeight' => 12,
+                    ]
                 ],
                 'tooltip' => [
+                    'backgroundColor' => 'rgba(0, 0, 0, 0.8)',
+                    'titleColor' => '#ffffff',
+                    'bodyColor' => '#ffffff',
+                    'borderColor' => 'rgba(255, 255, 255, 0.1)',
+                    'borderWidth' => 1,
+                    'cornerRadius' => 6,
+                    'padding' => 10,
+                    'displayColors' => true,
                     'mode' => 'index',
-                    'intersect' => false
+                    'intersect' => false,
+                ]
+            ],
+            'scales' => [
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                    ],
+                    'border' => [
+                        'display' => false,
+                    ]
+                ],
+                'y' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'left',
+                    'beginAtZero' => true,
+                    'max' => 100,
+                    'grid' => [
+                        'color' => 'rgba(107, 114, 128, 0.1)',
+                        'lineWidth' => 1,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'stepSize' => 25,
+                    ],
+                    'border' => [
+                        'display' => false,
+                    ]
+                ],
+                'y1' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'right',
+                    'beginAtZero' => true,
+                    'max' => 200,
+                    'grid' => [
+                        'drawOnChartArea' => false,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'stepSize' => 50,
+                    ],
+                    'border' => [
+                        'display' => false,
+                    ]
+                ]
+            ],
+            'elements' => [
+                'bar' => [
+                    'backgroundColor' => 'rgba(0, 0, 0, 0.1)',
+                    'borderRadius' => 2,
+                    'borderSkipped' => false,
+                ]
+            ],
+            'layout' => [
+                'padding' => [
+                    'top' => 10,
+                    'bottom' => 10,
+                    'left' => 10,
+                    'right' => 10,
                 ]
             ],
             'interaction' => [
-                'mode' => 'nearest',
-                'axis' => 'x',
-                'intersect' => false
+                'intersect' => false,
+                'mode' => 'index',
+            ],
+            'animation' => [
+                'duration' => 500,
+                'easing' => 'easeInOutQuart',
             ]
         ];
+    }
+
+    // Method untuk refresh data secara otomatis
+    protected function getPollingInterval(): ?string
+    {
+        return '30s';
     }
 }
