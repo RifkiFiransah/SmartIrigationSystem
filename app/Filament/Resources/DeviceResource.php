@@ -27,7 +27,8 @@ class DeviceResource extends Resource
             ->schema([
                 TextInput::make('device_id')
                     ->label('Device ID')
-                    ->required()
+                    ->placeholder('Auto generated Device ID')
+                    ->readOnly()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 TextInput::make('device_name')
@@ -44,8 +45,8 @@ class DeviceResource extends Resource
                     ->default(true)
                     ->inline()
                     ->required(),
-            ])->columns(2)
-            ->columnSpan([1, 2]);
+            ])->columns(2);
+            // ->columnSpan([1, 2]);
     }
 
     public static function table(Table $table): Table
@@ -73,6 +74,7 @@ class DeviceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -86,6 +88,13 @@ class DeviceResource extends Resource
         return [
             //
         ];
+    }
+
+    // Navigation badge untuk menampilkan jumlah data
+    public static function getNavigationBadge(): ?string
+    {
+        // return static::getModel()::whereDate('created_at', today())->count();
+        return static::getModel()::count() ?: null;
     }
 
     public static function getPages(): array

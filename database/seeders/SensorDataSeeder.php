@@ -93,17 +93,17 @@ class SensorDataSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('🌱 Starting sensor data seeding...');
+        $this->command->info('Starting sensor data seeding...');
         
         // Ambil device_id dari tabel devices yang aktif
         $deviceIds = DB::table('devices')->where('is_active', true)->pluck('id')->toArray();
         
         if (empty($deviceIds)) {
-            $this->command->warn('⚠️  No active devices found. Please seed devices first.');
+            $this->command->warn('No active devices found. Please seed devices first.');
             return;
         }
         
-        $this->command->info("📱 Found " . count($deviceIds) . " active devices");
+        $this->command->info("Found " . count($deviceIds) . " active devices");
         
         // Hapus data lama jika ada
         $this->cleanupOldData();
@@ -137,11 +137,11 @@ class SensorDataSeeder extends Seeder
             // Progress indicator
             if (($day % 5) == 0) {
                 $progress = round(((29 - $day) / 30) * 100);
-                $this->command->info("📊 Progress: {$progress}% - Day " . (30 - $day) . "/30");
+                $this->command->info("Progress: {$progress}% - Day " . (30 - $day) . "/30");
             }
         }
         
-        $this->command->info("💾 Inserting {$totalRecords} sensor records...");
+        $this->command->info("Inserting {$totalRecords} sensor records...");
         
         // Batch insert untuk performa yang lebih baik
         $chunks = array_chunk($sensorData, 500); // Increased chunk size
@@ -154,7 +154,7 @@ class SensorDataSeeder extends Seeder
         
         $progressBar->finish();
         $this->command->newLine();
-        $this->command->info("✅ Successfully seeded {$totalRecords} sensor data records!");
+        $this->command->info("Successfully seeded {$totalRecords} sensor data records!");
         
         // Display statistics
         $this->displayStatistics();
@@ -335,7 +335,7 @@ class SensorDataSeeder extends Seeder
         $deletedCount = DB::table('sensor_data')->delete();
         
         if ($deletedCount > 0) {
-            $this->command->info("🗑️  Deleted {$deletedCount} old records");
+            $this->command->info("Deleted {$deletedCount} old records");
         }
     }
     
@@ -345,7 +345,7 @@ class SensorDataSeeder extends Seeder
     private function displayStatistics(): void
     {
         $this->command->newLine();
-        $this->command->info('📈 Seeding Statistics:');
+        $this->command->info('Seeding Statistics:');
         
         $totalRecords = DB::table('sensor_data')->count();
         $normalCount = DB::table('sensor_data')->where('status', 'normal')->count();
@@ -366,7 +366,7 @@ class SensorDataSeeder extends Seeder
             ->selectRaw('MIN(recorded_at) as earliest, MAX(recorded_at) as latest')
             ->first();
             
-        $this->command->info("📅 Date range: {$dateRange->earliest} to {$dateRange->latest}");
-        $this->command->info('🎉 Sensor data seeding completed successfully!');
+        $this->command->info("Date range: {$dateRange->earliest} to {$dateRange->latest}");
+        $this->command->info('Sensor data seeding completed successfully!');
     }
 }

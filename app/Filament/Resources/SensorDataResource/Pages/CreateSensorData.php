@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateSensorData extends CreateRecord
 {
     protected static string $resource = SensorDataResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

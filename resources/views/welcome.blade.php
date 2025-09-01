@@ -78,7 +78,7 @@
                 <h1 class="text-4xl font-bold mb-4">🌱 Sistem Irigasi Pintar</h1>
                 <p class="text-lg mb-6 max-w-2xl mx-auto">
                     Sistem irigasi pertanian otomatis dengan sensor IoT untuk monitoring real-time 
-                    suhu, kelembapan, kelembapan tanah, dan laju aliran air.
+                    suhu, kelembapan, kelembapan tanah, laju aliran air, dan manajemen penyimpanan air.
                 </p>
                 <div class="flex justify-center space-x-4 text-sm">
                     <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
@@ -88,6 +88,10 @@
                     <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
                         <span class="block font-semibold">Sensor</span>
                         <span class="text-xs">IoT</span>
+                    </div>
+                    <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
+                        <span class="block font-semibold">Water</span>
+                        <span class="text-xs">Storage</span>
                     </div>
                     <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
                         <span class="block font-semibold">Protokol</span>
@@ -227,6 +231,290 @@
             </div> --}}
         </div>
 
+        <!-- Water Storage Section -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Status Penyimpanan Air</h2>
+            
+            <!-- Water Storage Loading State -->
+            <div x-show="waterStorages.length === 0" class="text-center py-8">
+                <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-gray-500 bg-white">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Memuat data penyimpanan air...
+                </div>
+            </div>
+
+            <!-- Water Storage Grid -->
+            <div x-show="waterStorages.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <template x-for="storage in waterStorages" :key="storage.id">
+                    <div class="bg-white rounded-xl shadow-lg p-6 card-shadow border-l-4" 
+                         :class="getWaterStorageBorderColor(storage.status)">
+                        
+                        <!-- Storage Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800" x-text="storage.tank_name"></h3>
+                                <p class="text-sm text-gray-500" x-text="storage.device_name || 'Tidak terhubung ke device'"></p>
+                            </div>
+                            <div class="text-2xl">
+                                <span x-show="storage.status === 'full'">🟢</span>
+                                <span x-show="storage.status === 'normal'">🔵</span>
+                                <span x-show="storage.status === 'low'">🟡</span>
+                                <span x-show="storage.status === 'empty'">🔴</span>
+                            </div>
+                        </div>
+
+                        <!-- Water Level Progress Bar -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">Volume Air</span>
+                                <span class="text-sm font-bold" 
+                                      :class="getWaterLevelColor(storage.percentage)"
+                                      x-text="`${parseFloat(storage.percentage || 0).toFixed(1)}%`"></span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="h-3 rounded-full transition-all duration-500" 
+                                     :class="getWaterLevelBgColor(storage.percentage)"
+                                     :style="`width: ${storage.percentage}%`"></div>
+                            </div>
+                        </div>
+
+                        <!-- Storage Metrics -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">💧 Volume Saat Ini</span>
+                                <span class="font-semibold text-blue-600" x-text="`${parseFloat(storage.current_volume || 0).toFixed(1)} L`"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">📊 Kapasitas Total</span>
+                                <span class="font-semibold text-gray-700" x-text="`${parseFloat(storage.total_capacity || 0).toFixed(1)} L`"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">🏷️ Status</span>
+                                <span class="text-xs font-medium px-2 py-1 rounded-full"
+                                      :class="getWaterStorageStatusClass(storage.status)"
+                                      x-text="getWaterStorageStatusText(storage.status)">
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Storage Notes -->
+                        <div x-show="storage.notes" class="mt-4 pt-4 border-t border-gray-100">
+                            <p class="text-xs text-gray-500" x-text="storage.notes"></p>
+                        </div>
+
+                        <!-- Last Update -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-400">Terakhir diperbarui</span>
+                                <span class="text-xs text-gray-400" x-text="formatTime(storage.updated_at)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Water Storage Summary Stats -->
+            <div x-show="waterStorages.length > 0" class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600" x-text="waterStorageStats.totalTanks"></div>
+                    <div class="text-sm text-gray-600">Total Tangki</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600" x-text="waterStorageStats.totalCapacity + ' L'"></div>
+                    <div class="text-sm text-gray-600">Kapasitas Total</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-cyan-600" x-text="waterStorageStats.currentVolume + ' L'"></div>
+                    <div class="text-sm text-gray-600">Volume Saat Ini</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold" 
+                         :class="waterStorageStats.averagePercentage >= 70 ? 'text-green-600' : waterStorageStats.averagePercentage >= 40 ? 'text-yellow-600' : 'text-red-600'"
+                         x-text="waterStorageStats.averagePercentage + '%'"></div>
+                    <div class="text-sm text-gray-600">Rata-rata Terisi</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Irrigation Control Section -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Kontrol Sistem Irigasi</h2>
+            
+            <!-- Irrigation Control Loading State -->
+            <div x-show="irrigationControls.length === 0" class="text-center py-8">
+                <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-gray-500 bg-white">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Memuat data kontrol irigasi...
+                </div>
+            </div>
+
+            <!-- System Status Overview -->
+            <div x-show="irrigationControls.length > 0" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600" x-text="irrigationStatus.system_overview.total_controls"></div>
+                    <div class="text-sm text-gray-600">Total Kontrol</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600" x-text="irrigationStatus.system_overview.running_controls"></div>
+                    <div class="text-sm text-gray-600">Sedang Berjalan</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600" x-text="irrigationStatus.system_overview.auto_mode_controls"></div>
+                    <div class="text-sm text-gray-600">Mode Otomatis</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 text-center">
+                    <div class="text-2xl font-bold text-orange-600" x-text="irrigationStatus.today_stats.total_runs"></div>
+                    <div class="text-sm text-gray-600">Aktivasi Hari Ini</div>
+                </div>
+            </div>
+
+            <!-- Irrigation Controls Grid -->
+            <div x-show="irrigationControls.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="control in irrigationControls" :key="control.id">
+                    <div class="bg-white rounded-xl shadow-lg p-6 card-shadow border-l-4" 
+                         :class="getControlBorderColor(control.status)">
+                        
+                        <!-- Control Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800" x-text="control.control_name"></h3>
+                                <p class="text-sm text-gray-500" x-text="control.device.device_name"></p>
+                                <p class="text-xs text-gray-400" x-text="getControlTypeIcon(control.control_type) + ' ' + control.control_type.toUpperCase()"></p>
+                            </div>
+                            <div class="text-3xl" x-text="control.status_icon"></div>
+                        </div>
+
+                        <!-- Control Status & Mode -->
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="text-center">
+                                <div class="text-sm text-gray-600 mb-1">Status</div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      :class="getControlStatusClass(control.status)"
+                                      x-text="control.status.toUpperCase()">
+                                </span>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm text-gray-600 mb-1">Mode</div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      :class="control.is_auto_mode ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'"
+                                      x-text="control.is_auto_mode ? '🤖 AUTO' : '👤 MANUAL'">
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Control Details -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">⚡ GPIO Pin</span>
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded font-mono" x-text="control.pin_number || 'N/A'"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">⏱️ Durasi Default</span>
+                                <span class="font-semibold text-gray-700" x-text="`${control.duration_minutes} menit`"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">📊 Penggunaan Hari Ini</span>
+                                <span class="font-semibold text-blue-600" x-text="formatDuration(control.today_duration)"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">📅 Jadwal Aktif</span>
+                                <span class="font-semibold text-purple-600" x-text="`${control.active_schedules} jadwal`"></span>
+                            </div>
+                        </div>
+
+                        <!-- Last Activation Info -->
+                        <div x-show="control.last_activated_at" class="mb-4 pt-3 border-t border-gray-100">
+                            <div class="text-xs text-gray-500">
+                                <span>Terakhir aktif: </span>
+                                <span x-text="formatTime(control.last_activated_at)"></span>
+                            </div>
+                        </div>
+
+                        <!-- Control Actions -->
+                        <div class="flex space-x-2">
+                            <!-- Start/Stop Button -->
+                            <button class="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                                    :class="control.is_running ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                                    @click="toggleIrrigation(control)"
+                                    :disabled="actionLoading">
+                                <span x-show="!actionLoading">
+                                    <span x-show="control.is_running">🛑 Stop</span>
+                                    <span x-show="!control.is_running">▶️ Start</span>
+                                </span>
+                                <span x-show="actionLoading">⏳</span>
+                            </button>
+                            
+                            <!-- Mode Toggle Button -->
+                            <button class="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                    @click="toggleMode(control)"
+                                    :disabled="actionLoading">
+                                <span x-show="!actionLoading">
+                                    <span x-show="control.is_auto_mode">👤</span>
+                                    <span x-show="!control.is_auto_mode">🤖</span>
+                                </span>
+                                <span x-show="actionLoading">⏳</span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Running Irrigation Info -->
+            <div x-show="irrigationStatus.running_now && irrigationStatus.running_now.length > 0" class="mt-6">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-green-800 mb-2">🟢 Irigasi Sedang Berjalan</h4>
+                    <div class="space-y-2">
+                        <template x-for="running in irrigationStatus.running_now" :key="running.control_id">
+                            <div class="flex items-center justify-between bg-white rounded p-3">
+                                <div>
+                                    <span class="font-medium text-gray-800" x-text="running.control_name"></span>
+                                    <span class="text-sm text-gray-500 ml-2" x-text="`(${running.device_name})`"></span>
+                                </div>
+                                <div class="text-sm text-green-600 font-medium">
+                                    <span x-text="`${Math.max(0, Math.round(running.duration_so_far))} menit`"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Stop Button -->
+            <div x-show="irrigationStatus.system_overview && irrigationStatus.system_overview.running_controls > 0" class="mt-6 text-center">
+                <button class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                        @click="emergencyStop()"
+                        :disabled="actionLoading">
+                    <span x-show="!actionLoading">🚨 EMERGENCY STOP</span>
+                    <span x-show="actionLoading">⏳ Stopping...</span>
+                </button>
+            </div>
+
+            <!-- Today's Statistics -->
+            <div x-show="irrigationStatus.today_stats" class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-blue-800 mb-3">📊 Statistik Hari Ini</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600" x-text="irrigationStatus.today_stats.total_runs"></div>
+                        <div class="text-sm text-blue-700">Total Aktivasi</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600" x-text="Math.round(irrigationStatus.today_stats.total_duration_minutes) + ' menit'"></div>
+                        <div class="text-sm text-blue-700">Total Durasi</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-cyan-600" x-text="Math.round(irrigationStatus.today_stats.total_water_used) + ' L'"></div>
+                        <div class="text-sm text-blue-700">Air Terpakai</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Charts Section - Optimized Layout -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
             <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Analitik Data Sensor</h2>
@@ -317,6 +605,14 @@
                     </div>
 
                     <div class="bg-white rounded-xl shadow-lg p-6 card-shadow">
+                        <div class="text-4xl mb-4">💧</div>
+                        <h3 class="text-xl font-semibold mb-3">Manajemen Air</h3>
+                        <p class="text-gray-600">
+                            Monitor volume air dalam tangki secara real-time dengan peringatan otomatis untuk level air rendah.
+                        </p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6 card-shadow">
                         <div class="text-4xl mb-4">⚡</div>
                         <h3 class="text-xl font-semibold mb-3">Otomasi</h3>
                         <p class="text-gray-600">
@@ -385,16 +681,39 @@
                         flowStatus: 'memuat...'
                     },
                     devices: [], // Data per device/node
+                    waterStorages: [], // Water storage data
+                    waterStorageStats: {
+                        totalTanks: 0,
+                        totalCapacity: 0,
+                        currentVolume: 0,
+                        averagePercentage: 0
+                    },
+                    irrigationControls: [], // Irrigation control devices
+                    irrigationStatus: {
+                        total_controls: 0,
+                        active_controls: 0,
+                        total_schedules: 0,
+                        running_irrigation: [],
+                        today_stats: {
+                            total_runs: 0,
+                            total_duration_minutes: 0,
+                            total_water_used: 0
+                        }
+                    },
                     charts: {},
                     
                     async init() {
                         await this.loadLatestData();
                         await this.loadDevicesData();
+                        await this.loadWaterStorageData();
+                        await this.loadIrrigationData();
                         await this.initCharts();
                         // Update data every 30 seconds
                         setInterval(() => {
                             this.loadLatestData();
                             this.loadDevicesData();
+                            this.loadWaterStorageData();
+                            this.loadIrrigationData();
                             this.updateCharts();
                         }, 30000);
                     },
@@ -961,6 +1280,133 @@
                         }
                     },
 
+                    // Water Storage Functions
+                    async loadWaterStorageData() {
+                        try {
+                            const response = await fetch('/api/water-storage');
+                            const data = await response.json();
+                            
+                            if (data.success && data.data) {
+                                this.waterStorages = data.data;
+                                this.calculateWaterStorageStats();
+                                console.log('Water storages loaded:', this.waterStorages);
+                            } else {
+                                // Load sample data if API fails
+                                this.loadSampleWaterStorageData();
+                            }
+                        } catch (error) {
+                            console.error('Error loading water storage data:', error);
+                            this.loadSampleWaterStorageData();
+                        }
+                    },
+
+                    loadSampleWaterStorageData() {
+                        this.waterStorages = [
+                            {
+                                id: 1,
+                                tank_name: 'Main Water Tank',
+                                device_name: 'Node 1 - Greenhouse A',
+                                total_capacity: 1000,
+                                current_volume: 750,
+                                percentage: 75,
+                                status: 'normal',
+                                notes: 'Tangki air utama untuk irigasi kebun utama',
+                                updated_at: new Date().toISOString()
+                            },
+                            {
+                                id: 2,
+                                tank_name: 'Secondary Tank A',
+                                device_name: null,
+                                total_capacity: 500,
+                                current_volume: 125,
+                                percentage: 25,
+                                status: 'low',
+                                notes: 'Tangki cadangan untuk area A',
+                                updated_at: new Date(Date.now() - 300000).toISOString()
+                            },
+                            {
+                                id: 3,
+                                tank_name: 'Emergency Tank',
+                                device_name: null,
+                                total_capacity: 250,
+                                current_volume: 20,
+                                percentage: 8,
+                                status: 'empty',
+                                notes: 'Tangki darurat - perlu diisi segera',
+                                updated_at: new Date(Date.now() - 600000).toISOString()
+                            },
+                            {
+                                id: 4,
+                                tank_name: 'Greenhouse Tank',
+                                device_name: 'Node 2 - Greenhouse B',
+                                total_capacity: 300,
+                                current_volume: 280,
+                                percentage: 93.3,
+                                status: 'full',
+                                notes: 'Tangki khusus untuk greenhouse',
+                                updated_at: new Date(Date.now() - 120000).toISOString()
+                            }
+                        ];
+                        this.calculateWaterStorageStats();
+                        console.log('Sample water storages loaded:', this.waterStorages);
+                    },
+
+                    calculateWaterStorageStats() {
+                        this.waterStorageStats.totalTanks = this.waterStorages.length;
+                        this.waterStorageStats.totalCapacity = this.waterStorages.reduce((sum, storage) => 
+                            sum + parseFloat(storage.total_capacity || 0), 0).toFixed(1);
+                        this.waterStorageStats.currentVolume = this.waterStorages.reduce((sum, storage) => 
+                            sum + parseFloat(storage.current_volume || 0), 0).toFixed(1);
+                        this.waterStorageStats.averagePercentage = this.waterStorageStats.totalCapacity > 0 ? 
+                            ((this.waterStorageStats.currentVolume / this.waterStorageStats.totalCapacity) * 100).toFixed(1) : 0;
+                    },
+
+                    getWaterStorageBorderColor(status) {
+                        switch(status) {
+                            case 'full': return 'border-green-600';
+                            case 'normal': return 'border-blue-500';
+                            case 'low': return 'border-yellow-500';
+                            case 'empty': return 'border-red-500';
+                            default: return 'border-gray-300';
+                        }
+                    },
+
+                    getWaterStorageStatusClass(status) {
+                        switch(status) {
+                            case 'full': return 'bg-green-100 text-green-800';
+                            case 'normal': return 'bg-blue-100 text-blue-800';
+                            case 'low': return 'bg-yellow-100 text-yellow-800';
+                            case 'empty': return 'bg-red-100 text-red-800';
+                            default: return 'bg-gray-100 text-gray-800';
+                        }
+                    },
+
+                    getWaterStorageStatusText(status) {
+                        switch(status) {
+                            case 'full': return 'Penuh';
+                            case 'normal': return 'Normal';
+                            case 'low': return 'Rendah';
+                            case 'empty': return 'Kosong';
+                            default: return 'Tidak Diketahui';
+                        }
+                    },
+
+                    getWaterLevelColor(percentage) {
+                        const perc = parseFloat(percentage);
+                        if (perc >= 80) return 'text-green-600';
+                        if (perc >= 50) return 'text-blue-600';
+                        if (perc >= 25) return 'text-yellow-600';
+                        return 'text-red-600';
+                    },
+
+                    getWaterLevelBgColor(percentage) {
+                        const perc = parseFloat(percentage);
+                        if (perc >= 80) return 'bg-green-500';
+                        if (perc >= 50) return 'bg-blue-500';
+                        if (perc >= 25) return 'bg-yellow-500';
+                        return 'bg-red-500';
+                    },
+
                     formatTime(timestamp) {
                         if (!timestamp) return 'N/A';
                         const date = new Date(timestamp);
@@ -975,6 +1421,257 @@
                         if (diffHours < 24) return `${diffHours} jam lalu`;
                         
                         return date.toLocaleDateString('id-ID');
+                    },
+
+                    // Irrigation Control Functions
+                    async loadIrrigationData() {
+                        try {
+                            const [controlsResponse, statusResponse] = await Promise.all([
+                                fetch('/api/irrigation-controls'),
+                                fetch('/api/irrigation-controls/status')
+                            ]);
+                            
+                            const controlsData = await controlsResponse.json();
+                            const statusData = await statusResponse.json();
+                            
+                            if (controlsData.success && controlsData.data) {
+                                this.irrigationControls = controlsData.data;
+                            } else {
+                                this.loadSampleIrrigationData();
+                            }
+                            
+                            if (statusData.success && statusData.data) {
+                                this.irrigationStatus = statusData.data;
+                            }
+                            
+                            console.log('Irrigation data loaded:', {
+                                controls: this.irrigationControls,
+                                status: this.irrigationStatus
+                            });
+                        } catch (error) {
+                            console.error('Error loading irrigation data:', error);
+                            this.loadSampleIrrigationData();
+                        }
+                    },
+
+                    loadSampleIrrigationData() {
+                        this.irrigationControls = [
+                            {
+                                id: 1,
+                                device_id: 1,
+                                control_name: 'Main Pump',
+                                control_type: 'pump',
+                                gpio_pin: 18,
+                                status: 'on',
+                                mode: 'manual',
+                                today_duration: 2.5,
+                                device: { name: 'Node 1 - Greenhouse A' },
+                                schedules_count: 3,
+                                last_activated: new Date(Date.now() - 600000).toISOString()
+                            },
+                            {
+                                id: 2,
+                                device_id: 1,
+                                control_name: 'Valve A1',
+                                control_type: 'valve',
+                                gpio_pin: 19,
+                                status: 'off',
+                                mode: 'automatic',
+                                today_duration: 1.2,
+                                device: { name: 'Node 1 - Greenhouse A' },
+                                schedules_count: 2,
+                                last_activated: new Date(Date.now() - 1800000).toISOString()
+                            },
+                            {
+                                id: 3,
+                                device_id: 2,
+                                control_name: 'Motor B1',
+                                control_type: 'motor',
+                                gpio_pin: 20,
+                                status: 'on',
+                                mode: 'automatic',
+                                today_duration: 0.8,
+                                device: { name: 'Node 2 - Greenhouse B' },
+                                schedules_count: 1,
+                                last_activated: new Date(Date.now() - 300000).toISOString()
+                            },
+                            {
+                                id: 4,
+                                device_id: 2,
+                                control_name: 'Valve B2',
+                                control_type: 'valve',
+                                gpio_pin: 21,
+                                status: 'off',
+                                mode: 'manual',
+                                today_duration: 0,
+                                device: { name: 'Node 2 - Greenhouse B' },
+                                schedules_count: 0,
+                                last_activated: null
+                            }
+                        ];
+
+                        this.irrigationStatus = {
+                            total_controls: 4,
+                            active_controls: 2,
+                            total_schedules: 6,
+                            running_irrigation: [
+                                { id: 1, control_name: 'Main Pump', duration: '10 menit' },
+                                { id: 3, control_name: 'Motor B1', duration: '5 menit' }
+                            ],
+                            today_stats: {
+                                total_runs: 12,
+                                total_duration_minutes: 4.5,
+                                total_water_used: 150.5
+                            }
+                        };
+                    },
+
+                    async toggleIrrigation(controlId) {
+                        try {
+                            const control = this.irrigationControls.find(c => c.id === controlId);
+                            if (!control) return;
+
+                            const isOn = control.status === 'on';
+                            const endpoint = isOn ? 'stop' : 'start';
+                            
+                            const response = await fetch(`/api/irrigation-controls/${controlId}/${endpoint}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                                }
+                            });
+
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Update local state
+                                control.status = isOn ? 'off' : 'on';
+                                control.last_activated = new Date().toISOString();
+                                
+                                // Show success message
+                                this.showNotification(
+                                    `${control.control_name} berhasil ${isOn ? 'dimatikan' : 'dinyalakan'}`,
+                                    'success'
+                                );
+                                
+                                // Reload data to sync with server
+                                await this.loadIrrigationData();
+                            } else {
+                                this.showNotification(data.message || 'Gagal mengubah status irigasi', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error toggling irrigation:', error);
+                            this.showNotification('Terjadi kesalahan saat mengubah status irigasi', 'error');
+                        }
+                    },
+
+                    async toggleMode(controlId) {
+                        try {
+                            const control = this.irrigationControls.find(c => c.id === controlId);
+                            if (!control) return;
+
+                            const newMode = control.mode === 'manual' ? 'automatic' : 'manual';
+                            
+                            const response = await fetch(`/api/irrigation-controls/${controlId}/mode`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                                },
+                                body: JSON.stringify({ mode: newMode })
+                            });
+
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Update local state
+                                control.mode = newMode;
+                                
+                                // Show success message
+                                this.showNotification(
+                                    `${control.control_name} berhasil diubah ke mode ${newMode === 'manual' ? 'manual' : 'otomatis'}`,
+                                    'success'
+                                );
+                            } else {
+                                this.showNotification(data.message || 'Gagal mengubah mode irigasi', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error toggling mode:', error);
+                            this.showNotification('Terjadi kesalahan saat mengubah mode irigasi', 'error');
+                        }
+                    },
+
+                    async emergencyStop() {
+                        if (!confirm('Apakah Anda yakin ingin menghentikan semua irigasi? Tindakan ini akan menghentikan semua pompa dan valve yang sedang aktif.')) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch('/api/irrigation-controls/emergency-stop', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                                }
+                            });
+
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Update all controls to off status
+                                this.irrigationControls.forEach(control => {
+                                    control.status = 'off';
+                                });
+                                
+                                this.showNotification('Emergency stop berhasil! Semua irigasi telah dihentikan.', 'success');
+                                
+                                // Reload data to sync with server
+                                await this.loadIrrigationData();
+                            } else {
+                                this.showNotification(data.message || 'Gagal melakukan emergency stop', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error emergency stop:', error);
+                            this.showNotification('Terjadi kesalahan saat melakukan emergency stop', 'error');
+                        }
+                    },
+
+                    getControlStatusClass(status) {
+                        return status === 'on' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700';
+                    },
+
+                    getControlStatusText(status) {
+                        return status === 'on' ? 'Aktif' : 'Nonaktif';
+                    },
+
+                    getControlTypeIcon(type) {
+                        switch(type) {
+                            case 'pump': return '🔧';
+                            case 'valve': return '🚰';
+                            case 'motor': return '⚙️';
+                            default: return '🔌';
+                        }
+                    },
+
+                    getModeClass(mode) {
+                        return mode === 'automatic' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
+                    },
+
+                    getModeText(mode) {
+                        return mode === 'automatic' ? 'Otomatis' : 'Manual';
+                    },
+
+                    showNotification(message, type = 'info') {
+                        // Simple notification - you can enhance this with a proper notification system
+                        const className = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-info';
+                        
+                        // Create a simple alert for now - you can replace with toast notification
+                        if (type === 'error') {
+                            alert('Error: ' + message);
+                        } else {
+                            alert(message);
+                        }
                     },
 
                     async updateCharts() {

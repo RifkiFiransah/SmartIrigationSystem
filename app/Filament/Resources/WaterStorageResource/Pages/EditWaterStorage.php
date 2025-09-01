@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\SensorDataResource\Pages;
+namespace App\Filament\Resources\WaterStorageResource\Pages;
 
-use App\Filament\Resources\SensorDataResource;
+use App\Filament\Resources\WaterStorageResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
-class EditSensorData extends EditRecord
+class EditWaterStorage extends EditRecord
 {
-    protected static string $resource = SensorDataResource::class;
+    protected static string $resource = WaterStorageResource::class;
 
     protected function getHeaderActions(): array
     {
