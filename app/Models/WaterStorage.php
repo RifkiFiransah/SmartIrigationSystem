@@ -22,16 +22,16 @@ class WaterStorage extends Model
         'irrigation_system_type',
         'device_id',
         'associated_devices',
-        'total_capacity',
-        'current_volume',
+        'capacity_liters',
+        'current_volume_liters',
         'max_daily_usage',
         'status',
         'notes',
     ];
 
     protected $casts = [
-        'total_capacity' => 'decimal:2',
-        'current_volume' => 'decimal:2',
+        'capacity_liters' => 'decimal:2',
+        'current_volume_liters' => 'decimal:2',
         'max_daily_usage' => 'decimal:2',
         'area_size_sqm' => 'decimal:2',
         'total_lines' => 'integer',
@@ -86,10 +86,22 @@ class WaterStorage extends Model
     // Accessor untuk mendapatkan persentase
     public function getPercentageAttribute(): float
     {
-        if ($this->total_capacity <= 0) {
+        if ($this->capacity_liters <= 0) {
             return 0;
         }
-        return round(($this->current_volume / $this->total_capacity) * 100, 2);
+        return round(($this->current_volume_liters / $this->capacity_liters) * 100, 2);
+    }
+
+    // Accessor untuk backward compatibility - total_capacity
+    public function getTotalCapacityAttribute(): float
+    {
+        return $this->capacity_liters;
+    }
+
+    // Accessor untuk backward compatibility - current_volume
+    public function getCurrentVolumeAttribute(): float
+    {
+        return $this->current_volume_liters;
     }
 
     // Accessor untuk status otomatis berdasarkan persentase
@@ -111,7 +123,7 @@ class WaterStorage extends Model
     // Method untuk update volume
     public function updateVolume(float $newVolume): void
     {
-        $this->current_volume = min($newVolume, $this->total_capacity);
+        $this->current_volume_liters = min($newVolume, $this->capacity_liters);
         $this->status = $this->auto_status;
         $this->save();
     }
@@ -123,7 +135,7 @@ class WaterStorage extends Model
             return null;
         }
         
-        return (int) ceil($this->current_volume / $this->max_daily_usage);
+        return (int) ceil($this->current_volume_liters / $this->max_daily_usage);
     }
 
     // Method untuk cek apakah perlu refill
@@ -142,7 +154,7 @@ class WaterStorage extends Model
             'area_name' => $this->area_name,
             'total_nodes' => $this->total_nodes,
             'primary_device' => $this->device?->device_name,
-            'tank_capacity' => $this->total_capacity,
+            'tank_capacity' => $this->capacity_liters,
             'current_level' => $this->percentage,
             'estimated_days_left' => $this->days_until_empty,
             'needs_refill' => $this->needsRefill(),

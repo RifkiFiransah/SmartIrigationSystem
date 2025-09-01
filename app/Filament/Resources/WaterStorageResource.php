@@ -174,7 +174,7 @@ class WaterStorageResource extends Resource
                 Forms\Components\Section::make('Tank Capacity & Status')
                     ->description('Tank specifications and current status')
                     ->schema([
-                        Forms\Components\TextInput::make('total_capacity')
+                        Forms\Components\TextInput::make('capacity_liters')
                             ->label('Total Capacity (Liters)')
                             ->required()
                             ->numeric()
@@ -182,7 +182,7 @@ class WaterStorageResource extends Resource
                             ->suffix('L')
                             ->minValue(0),
                         
-                        Forms\Components\TextInput::make('current_volume')
+                        Forms\Components\TextInput::make('current_volume_liters')
                             ->label('Current Volume (Liters)')
                             ->required()
                             ->numeric()
@@ -300,13 +300,13 @@ class WaterStorageResource extends Resource
                     ->placeholder('No primary node')
                     ->toggleable(isToggledHiddenByDefault: true),
                 
-                Tables\Columns\TextColumn::make('total_capacity')
+                Tables\Columns\TextColumn::make('capacity_liters')
                     ->label('Capacity')
                     ->suffix(' L')
                     ->sortable()
                     ->alignRight(),
                 
-                Tables\Columns\TextColumn::make('current_volume')
+                Tables\Columns\TextColumn::make('current_volume_liters')
                     ->label('Current')
                     ->suffix(' L')
                     ->sortable()
@@ -385,12 +385,12 @@ class WaterStorageResource extends Resource
                 
                 Tables\Filters\Filter::make('low_capacity')
                     ->label('Low Capacity (<25%)')
-                    ->query(fn (Builder $query): Builder => $query->whereRaw('(current_volume / total_capacity) * 100 < 25'))
+                    ->query(fn (Builder $query): Builder => $query->whereRaw('(current_volume_liters / capacity_liters) * 100 < 25'))
                     ->toggle(),
                 
                 Tables\Filters\Filter::make('critical_capacity')
                     ->label('Critical (<10%)')
-                    ->query(fn (Builder $query): Builder => $query->whereRaw('(current_volume / total_capacity) * 100 < 10'))
+                    ->query(fn (Builder $query): Builder => $query->whereRaw('(current_volume_liters / capacity_liters) * 100 < 10'))
                     ->toggle(),
             ])
             ->actions([

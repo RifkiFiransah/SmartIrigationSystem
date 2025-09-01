@@ -269,7 +269,7 @@ class DataTransferController extends Controller
                     }),
                     'water_storage_summary' => [
                         'total_capacity' => $waterStorages->sum('total_capacity'),
-                        'current_volume' => $waterStorages->sum('current_volume'),
+                        'current_volume' => $waterStorages->sum('current_volume_liters'),
                         'average_percentage' => $waterStorages->count() > 0 ? 
                             round($waterStorages->avg(function ($storage) {
                                 return ($storage->current_volume / $storage->total_capacity) * 100;

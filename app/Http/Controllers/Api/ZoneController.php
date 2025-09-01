@@ -26,7 +26,7 @@ class ZoneController extends Controller
                     
                     // Calculate zone statistics
                     $totalCapacity = $tanks->sum('total_capacity');
-                    $currentVolume = $tanks->sum('current_volume');
+                    $currentVolume = $tanks->sum('current_volume_liters');
                     $percentage = $totalCapacity > 0 ? ($currentVolume / $totalCapacity) * 100 : 0;
                     
                     // Get unique devices in this zone
@@ -98,9 +98,9 @@ class ZoneController extends Controller
                         'critical_zones' => $zones->where('zone_status', 'critical')->count(),
                         'warning_zones' => $zones->where('zone_status', 'warning')->count(),
                         'overall_capacity' => round($zones->sum('total_capacity'), 2),
-                        'overall_volume' => round($zones->sum('current_volume'), 2),
-                        'overall_percentage' => $zones->sum('total_capacity') > 0 ? 
-                            round(($zones->sum('current_volume') / $zones->sum('total_capacity')) * 100, 2) : 0,
+                        'overall_volume' => round($zones->sum('current_volume_liters'), 2),
+                        'overall_percentage' => $zones->sum('capacity_liters') > 0 ? 
+                            round(($zones->sum('current_volume_liters') / $zones->sum('capacity_liters')) * 100, 2) : 0,
                     ]
                 ]
             ]);
@@ -168,7 +168,7 @@ class ZoneController extends Controller
                     'statistics' => [
                         'total_tanks' => $tanks->count(),
                         'total_capacity' => $tanks->sum('total_capacity'),
-                        'current_volume' => $tanks->sum('current_volume'),
+                        'current_volume' => $tanks->sum('current_volume_liters'),
                         'total_devices' => $allDevices->unique('device.id')->count(),
                         'estimated_daily_usage' => $tanks->sum('max_daily_usage'),
                     ]

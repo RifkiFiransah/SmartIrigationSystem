@@ -11,12 +11,12 @@ class WaterStorageOverview extends BaseWidget
     protected function getStats(): array
     {
         $totalTanks = WaterStorage::count();
-        $totalCapacity = WaterStorage::sum('total_capacity');
-        $totalCurrentVolume = WaterStorage::sum('current_volume');
+        $totalCapacity = WaterStorage::sum('capacity_liters');
+        $totalCurrentVolume = WaterStorage::sum('current_volume_liters');
         $averagePercentage = $totalCapacity > 0 ? round(($totalCurrentVolume / $totalCapacity) * 100, 1) : 0;
         
-        $lowTanks = WaterStorage::whereRaw('(current_volume / total_capacity) * 100 <= 25')->count();
-        $emptyTanks = WaterStorage::whereRaw('(current_volume / total_capacity) * 100 <= 10')->count();
+        $lowTanks = WaterStorage::whereRaw('(current_volume_liters / capacity_liters) * 100 <= 25')->count();
+        $emptyTanks = WaterStorage::whereRaw('(current_volume_liters / capacity_liters) * 100 <= 10')->count();
 
         return [
             Stat::make('Total Tanks', $totalTanks)
