@@ -19,131 +19,131 @@ class WaterStorageSeeder extends Seeder
         
         // Contoh data tangki air dengan area dan jalur irigasi
         $waterStorages = [
-            [
-                'tank_name' => 'Main Water Tank A',
-                'zone_name' => 'Greenhouse Complex A',
-                'area_name' => 'Blok Tomat Hidroponik A1',
-                'zone_description' => 'Kompleks greenhouse dengan sistem hidroponik untuk tanaman tomat premium.',
-                'total_lines' => 8,
-                'area_size_sqm' => 400.00,
-                'plant_types' => 'Tomat Cherry, Tomat Beefsteak',
-                'irrigation_system_type' => 'drip',
-                'irrigation_lines' => [
-                    [
-                        'line_id' => 'L001',
-                        'line_name' => 'Jalur Tomat Cherry A',
-                        'line_type' => 'drip',
-                        'plant_count' => 50,
-                        'coverage_sqm' => 50.0,
-                        'flow_rate_lpm' => 2.5,
-                        'status' => 'active',
-                        'nodes' => [
-                            [
-                                'node_id' => 'NODE_A1_001',
-                                'sensor_type' => 'soil_moisture',
-                                'location' => 'Row 1-2',
-                                'status' => 'active'
-                            ],
-                            [
-                                'node_id' => 'NODE_A1_002',
-                                'sensor_type' => 'temperature_humidity',
-                                'location' => 'Row 3-4',
-                                'status' => 'active'
-                            ]
-                        ]
-                    ],
-                    [
-                        'line_id' => 'L002',
-                        'line_name' => 'Jalur Tomat Cherry B',
-                        'line_type' => 'drip',
-                        'plant_count' => 50,
-                        'coverage_sqm' => 50.0,
-                        'flow_rate_lpm' => 2.5,
-                        'status' => 'active',
-                        'nodes' => [
-                            [
-                                'node_id' => 'NODE_A1_003',
-                                'sensor_type' => 'ph_ec',
-                                'location' => 'Row 5-6',
-                                'status' => 'active'
-                            ]
-                        ]
-                    ],
-                    ],
-                    [
-                        'line_id' => 'L003',
-                        'line_name' => 'Jalur Beefsteak A',
-                        'line_type' => 'drip',
-                        'plant_count' => 40,
-                        'coverage_sqm' => 80.0,
-                        'flow_rate_lpm' => 4.0,
-                        'status' => 'active',
-                        'nodes' => ['NODE_A1_004']
-                    ],
-                    [
-                        'line_id' => 'L004',
-                        'line_name' => 'Jalur Beefsteak B',
-                        'line_type' => 'drip',
-                        'plant_count' => 40,
-                        'coverage_sqm' => 80.0,
-                        'flow_rate_lpm' => 4.0,
-                        'status' => 'active',
-                        'nodes' => ['NODE_A1_005']
-                    ],
-                    [
-                        'line_id' => 'L005',
-                        'line_name' => 'Jalur Nursery A1',
-                        'line_type' => 'misting',
-                        'plant_count' => 200,
-                        'coverage_sqm' => 20.0,
-                        'flow_rate_lpm' => 1.0,
-                        'status' => 'active',
-                        'nodes' => ['NODE_A1_006']
-                    ],
-                    [
-                        'line_id' => 'L006',
-                        'line_name' => 'Jalur Backup A',
-                        'line_type' => 'drip',
-                        'plant_count' => 30,
-                        'coverage_sqm' => 40.0,
-                        'flow_rate_lpm' => 2.0,
-                        'status' => 'maintenance',
-                        'nodes' => []
-                    ],
-                    [
-                        'line_id' => 'L007',
-                        'line_name' => 'Jalur Ekspansi A',
-                        'line_type' => 'drip',
-                        'plant_count' => 0,
-                        'coverage_sqm' => 40.0,
-                        'flow_rate_lpm' => 2.0,
-                        'status' => 'inactive',
-                        'nodes' => []
-                    ],
-                    [
-                        'line_id' => 'L008',
-                        'line_name' => 'Jalur Testing A',
-                        'line_type' => 'mixed',
-                        'plant_count' => 10,
-                        'coverage_sqm' => 40.0,
-                        'flow_rate_lpm' => 1.5,
-                        'status' => 'active',
-                        'nodes' => ['NODE_A1_007']
-                    ]
-                ],
-                'device_id' => $devices->where('device_id', 'DEVICE_001')->first()?->id,
-                'associated_devices' => [
-                    [
-                        'device_id' => $devices->where('device_id', 'DEVICE_001')->first()?->id,
-                        'role' => 'Primary Controller & Soil Moisture Sensor'
-                    ]
-                ],
-                'total_capacity' => 2000.00,
-                'current_volume' => 1600.00,
-                'max_daily_usage' => 300.00,
-                'status' => 'normal',
-                'notes' => 'Tangki utama untuk blok tomat hidroponik dengan 8 jalur irigasi. Dilengkapi sensor otomatis.',
-            ],
+            // [
+            //     'tank_name' => 'Main Water Tank A',
+            //     'zone_name' => 'Greenhouse Complex A',
+            //     'area_name' => 'Blok Tomat Hidroponik A1',
+            //     'zone_description' => 'Kompleks greenhouse dengan sistem hidroponik untuk tanaman tomat premium.',
+            //     'total_lines' => 8,
+            //     'area_size_sqm' => 400.00,
+            //     'plant_types' => 'Tomat Cherry, Tomat Beefsteak',
+            //     'irrigation_system_type' => 'drip',
+            //     'irrigation_lines' => [
+            //         [
+            //             'line_id' => 'L001',
+            //             'line_name' => 'Jalur Tomat Cherry A',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 50,
+            //             'coverage_sqm' => 50.0,
+            //             'flow_rate_lpm' => 2.5,
+            //             'status' => 'active',
+            //             'nodes' => [
+            //                 [
+            //                     'node_id' => 'NODE_A1_001',
+            //                     'sensor_type' => 'soil_moisture',
+            //                     'location' => 'Row 1-2',
+            //                     'status' => 'active'
+            //                 ],
+            //                 [
+            //                     'node_id' => 'NODE_A1_002',
+            //                     'sensor_type' => 'temperature_humidity',
+            //                     'location' => 'Row 3-4',
+            //                     'status' => 'active'
+            //                 ]
+            //             ]
+            //         ],
+            //         [
+            //             'line_id' => 'L002',
+            //             'line_name' => 'Jalur Tomat Cherry B',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 50,
+            //             'coverage_sqm' => 50.0,
+            //             'flow_rate_lpm' => 2.5,
+            //             'status' => 'active',
+            //             'nodes' => [
+            //                 [
+            //                     'node_id' => 'NODE_A1_003',
+            //                     'sensor_type' => 'ph_ec',
+            //                     'location' => 'Row 5-6',
+            //                     'status' => 'active'
+            //                 ]
+            //             ]
+            //         ],
+            //         ],
+            //         [
+            //             'line_id' => 'L003',
+            //             'line_name' => 'Jalur Beefsteak A',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 40,
+            //             'coverage_sqm' => 80.0,
+            //             'flow_rate_lpm' => 4.0,
+            //             'status' => 'active',
+            //             'nodes' => ['NODE_A1_004']
+            //         ],
+            //         [
+            //             'line_id' => 'L004',
+            //             'line_name' => 'Jalur Beefsteak B',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 40,
+            //             'coverage_sqm' => 80.0,
+            //             'flow_rate_lpm' => 4.0,
+            //             'status' => 'active',
+            //             'nodes' => ['NODE_A1_005']
+            //         ],
+            //         [
+            //             'line_id' => 'L005',
+            //             'line_name' => 'Jalur Nursery A1',
+            //             'line_type' => 'misting',
+            //             'plant_count' => 200,
+            //             'coverage_sqm' => 20.0,
+            //             'flow_rate_lpm' => 1.0,
+            //             'status' => 'active',
+            //             'nodes' => ['NODE_A1_006']
+            //         ],
+            //         [
+            //             'line_id' => 'L006',
+            //             'line_name' => 'Jalur Backup A',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 30,
+            //             'coverage_sqm' => 40.0,
+            //             'flow_rate_lpm' => 2.0,
+            //             'status' => 'maintenance',
+            //             'nodes' => []
+            //         ],
+            //         [
+            //             'line_id' => 'L007',
+            //             'line_name' => 'Jalur Ekspansi A',
+            //             'line_type' => 'drip',
+            //             'plant_count' => 0,
+            //             'coverage_sqm' => 40.0,
+            //             'flow_rate_lpm' => 2.0,
+            //             'status' => 'inactive',
+            //             'nodes' => []
+            //         ],
+            //         [
+            //             'line_id' => 'L008',
+            //             'line_name' => 'Jalur Testing A',
+            //             'line_type' => 'mixed',
+            //             'plant_count' => 10,
+            //             'coverage_sqm' => 40.0,
+            //             'flow_rate_lpm' => 1.5,
+            //             'status' => 'active',
+            //             'nodes' => ['NODE_A1_007']
+            //         ]
+            //     ],
+            //     'device_id' => $devices->where('device_id', 'DEVICE_001')->first()?->id,
+            //     'associated_devices' => [
+            //         [
+            //             'device_id' => $devices->where('device_id', 'DEVICE_001')->first()?->id,
+            //             'role' => 'Primary Controller & Soil Moisture Sensor'
+            //         ]
+            //     ],
+            //     'total_capacity' => 2000.00,
+            //     'current_volume' => 1600.00,
+            //     'max_daily_usage' => 300.00,
+            //     'status' => 'normal',
+            //     'notes' => 'Tangki utama untuk blok tomat hidroponik dengan 8 jalur irigasi. Dilengkapi sensor otomatis.',
+            // ],
             [
                 'tank_name' => 'Backup Tank A',
                 'zone_name' => 'Greenhouse Complex A',
