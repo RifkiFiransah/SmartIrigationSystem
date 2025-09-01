@@ -35,7 +35,8 @@ return new class extends Migration
             
             $table->timestamps();
             
-            $table->foreign('device_id')->references('id')->on('devices')->onDelete('set null');
+            // Foreign key will be added later after devices table is created
+            // $table->foreign('device_id')->references('id')->on('devices')->onDelete('set null');
         });
     }
 
