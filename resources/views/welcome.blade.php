@@ -254,16 +254,32 @@
                         
                         <!-- Storage Header -->
                         <div class="flex items-center justify-between mb-4">
-                            <div>
+                            <div class="flex-1">
                                 <h3 class="text-lg font-bold text-gray-800" x-text="storage.tank_name"></h3>
-                                <p class="text-sm text-gray-500" x-text="storage.device_name || 'Tidak terhubung ke device'"></p>
+                                <!-- Zone Information -->
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" 
+                                          x-text="storage.zone_name || 'Zona tidak diset'"></span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1" x-text="storage.device_name || 'Tidak terhubung ke device'"></p>
+                                <!-- Total Nodes -->
+                                <div class="flex items-center mt-1 text-xs text-gray-400" x-show="storage.total_nodes">
+                                    <span>📡</span>
+                                    <span x-text="`${storage.total_nodes || 0} nodes`" class="ml-1"></span>
+                                </div>
                             </div>
                             <div class="text-2xl">
                                 <span x-show="storage.status === 'full'">🟢</span>
                                 <span x-show="storage.status === 'normal'">🔵</span>
                                 <span x-show="storage.status === 'low'">🟡</span>
                                 <span x-show="storage.status === 'empty'">🔴</span>
+                                <span x-show="storage.status === 'maintenance'">🔧</span>
                             </div>
+                        </div>
+
+                        <!-- Zone Description (if available) -->
+                        <div x-show="storage.zone_description" class="mb-3 p-2 bg-gray-50 rounded-lg">
+                            <p class="text-xs text-gray-600" x-text="storage.zone_description"></p>
                         </div>
 
                         <!-- Water Level Progress Bar -->
@@ -278,6 +294,19 @@
                                 <div class="h-3 rounded-full transition-all duration-500" 
                                      :class="getWaterLevelBgColor(storage.percentage)"
                                      :style="`width: ${storage.percentage}%`"></div>
+                            </div>
+                        </div>
+
+                        <!-- Usage Prediction (if available) -->
+                        <div x-show="storage.max_daily_usage && storage.max_daily_usage > 0" class="mb-3 p-2 bg-yellow-50 rounded-lg">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-yellow-700">📊 Prediksi:</span>
+                                <span class="font-medium text-yellow-800" 
+                                      x-text="`${Math.ceil((storage.current_volume || 0) / (storage.max_daily_usage || 1))} hari`"></span>
+                            </div>
+                            <div class="text-xs text-yellow-600 mt-1" 
+                                 x-text="`Konsumsi: ${storage.max_daily_usage} L/hari`"></div>
+                        </div>
                             </div>
                         </div>
 
@@ -1304,47 +1333,78 @@
                         this.waterStorages = [
                             {
                                 id: 1,
-                                tank_name: 'Main Water Tank',
+                                tank_name: 'Main Water Tank A',
+                                zone_name: 'Greenhouse A - Tomato Zone',
+                                zone_description: 'Zona tanaman tomat dengan sistem hidroponik. 20 bed tanaman.',
                                 device_name: 'Node 1 - Greenhouse A',
-                                total_capacity: 1000,
-                                current_volume: 750,
-                                percentage: 75,
+                                total_nodes: 2,
+                                total_capacity: 1500,
+                                current_volume: 1200,
+                                percentage: 80,
+                                max_daily_usage: 200,
                                 status: 'normal',
-                                notes: 'Tangki air utama untuk irigasi kebun utama',
+                                notes: 'Tangki utama untuk zona tomat greenhouse A',
                                 updated_at: new Date().toISOString()
                             },
                             {
                                 id: 2,
-                                tank_name: 'Secondary Tank A',
+                                tank_name: 'Backup Tank A',
+                                zone_name: 'Greenhouse A - Tomato Zone',
+                                zone_description: 'Tangki cadangan untuk zona tomat.',
                                 device_name: null,
-                                total_capacity: 500,
-                                current_volume: 125,
-                                percentage: 25,
+                                total_nodes: 0,
+                                total_capacity: 800,
+                                current_volume: 150,
+                                percentage: 18.75,
+                                max_daily_usage: 100,
                                 status: 'low',
-                                notes: 'Tangki cadangan untuk area A',
+                                notes: 'Tangki cadangan - perlu diisi ulang',
                                 updated_at: new Date(Date.now() - 300000).toISOString()
                             },
                             {
                                 id: 3,
-                                tank_name: 'Emergency Tank',
-                                device_name: null,
-                                total_capacity: 250,
-                                current_volume: 20,
-                                percentage: 8,
-                                status: 'empty',
-                                notes: 'Tangki darurat - perlu diisi segera',
-                                updated_at: new Date(Date.now() - 600000).toISOString()
+                                tank_name: 'Main Water Tank B',
+                                zone_name: 'Greenhouse B - Leafy Greens',
+                                zone_description: 'Zona sayuran berdaun hijau dengan sistem NFT. 15 channel tanaman.',
+                                device_name: 'Node 2 - Greenhouse B',
+                                total_nodes: 2,
+                                total_capacity: 1000,
+                                current_volume: 850,
+                                percentage: 85,
+                                max_daily_usage: 150,
+                                status: 'normal',
+                                notes: 'Tangki untuk zona sayuran berdaun',
+                                updated_at: new Date(Date.now() - 120000).toISOString()
                             },
                             {
                                 id: 4,
-                                tank_name: 'Greenhouse Tank',
-                                device_name: 'Node 2 - Greenhouse B',
-                                total_capacity: 300,
-                                current_volume: 280,
-                                percentage: 93.3,
-                                status: 'full',
-                                notes: 'Tangki khusus untuk greenhouse',
-                                updated_at: new Date(Date.now() - 120000).toISOString()
+                                tank_name: 'Outdoor Field Tank',
+                                zone_name: 'Outdoor Field - Mixed Vegetables',
+                                zone_description: 'Lahan terbuka untuk tanaman campuran dengan sistem sprinkler.',
+                                device_name: 'Node 3 - Outdoor Field',
+                                total_nodes: 3,
+                                total_capacity: 2000,
+                                current_volume: 1800,
+                                percentage: 90,
+                                max_daily_usage: 300,
+                                status: 'normal',
+                                notes: 'Tangki besar untuk lahan outdoor',
+                                updated_at: new Date(Date.now() - 60000).toISOString()
+                            },
+                            {
+                                id: 5,
+                                tank_name: 'Emergency Reserve Tank',
+                                zone_name: 'Central Reserve - All Zones',
+                                zone_description: 'Tangki cadangan darurat untuk semua zona.',
+                                device_name: null,
+                                total_nodes: 0,
+                                total_capacity: 1200,
+                                current_volume: 50,
+                                percentage: 4.17,
+                                max_daily_usage: 0,
+                                status: 'empty',
+                                notes: 'PERLU SEGERA DIISI!',
+                                updated_at: new Date(Date.now() - 600000).toISOString()
                             }
                         ];
                         this.calculateWaterStorageStats();

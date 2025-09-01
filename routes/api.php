@@ -40,6 +40,20 @@ Route::prefix('water-storage')->group(function () {
     Route::post('/update-volume', [WaterStorageController::class, 'updateVolume'])->middleware('auth:sanctum');
 });
 
+// ===== ZONE MANAGEMENT ROUTES =====
+Route::prefix('zones')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\ZoneController::class, 'getZonesSummary']);
+    Route::get('/{zoneName}', [App\Http\Controllers\Api\ZoneController::class, 'getZoneDetails']);
+});
+
+// ===== IRRIGATION LINES ROUTES =====
+Route::prefix('irrigation-lines')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\IrrigationLineController::class, 'getIrrigationLinesSummary']);
+    Route::get('/area/{areaName}', [App\Http\Controllers\Api\IrrigationLineController::class, 'getAreaIrrigationLines']);
+    Route::get('/analytics/efficiency', [App\Http\Controllers\Api\IrrigationLineController::class, 'getLineEfficiencyAnalytics']);
+    Route::get('/line/{lineId}', [App\Http\Controllers\Api\IrrigationLineController::class, 'getLineDetails']);
+});
+
 // ===== IRRIGATION CONTROL ROUTES =====
 Route::prefix('irrigation')->group(function () {
     // Public endpoints untuk reading (dashboard)
