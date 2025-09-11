@@ -1,189 +1,121 @@
-# 🌱 Smart Irrigation System - Laravel Backend
+# 🌱 Sistem Irigasi Cerdas
 
-## 📋 Project Overview
+## 📋 Tentang Proyek
 
-Laravel backend system for Smart Irrigation Management with area-based irrigation line control, real-time monitoring, and automated irrigation controls.
+Sistem manajemen irigasi cerdas berbasis Laravel untuk monitoring dan kontrol otomatis sistem penyiraman tanaman dengan sensor IoT dan dashboard real-time.
 
-## 🚀 Features
+## 🚀 Fitur Utama
 
-### ✅ Core Features
-- **Area-based Irrigation Management** - Multiple irrigation lines per area
-- **Smart Analytics** - Efficiency scoring and water consumption optimization  
-- **Real-time Dashboard** - Interactive web interface with Alpine.js
-- **REST API** - Complete API endpoints for mobile/IoT integration
-- **Node Tracking** - Detailed sensor monitoring per irrigation line
-- **Multiple Irrigation Types** - Drip, NFT, Misting, Sprinkler systems
+- **Dashboard Real-time** - Tampilan web interaktif untuk monitoring
+- **Sensor Monitoring** - Suhu, kelembaban tanah, ketinggian air, dan cahaya
+- **Manajemen Tangki Air** - Monitoring volume dan status tangki
+- **Rencana Irigasi** - Penjadwalan otomatis penyiraman harian
+- **API REST** - Endpoint lengkap untuk integrasi IoT dan mobile
+- **8 Node Sensor** - Monitoring detail per perangkat IoT
 
-### 📊 System Metrics
-- **3 Areas**: Blok Tomat Hidroponik, Blok Sayuran Berdaun, Backup Area
-- **24 Irrigation Lines**: Various types with efficiency tracking
-- **1,270+ Plants** managed across all areas
-- **1,150 m²** total coverage area
-- **Real-time efficiency analytics** with optimization recommendations
-
-## 🏗️ Project Structure
-
-This Laravel project is part of a larger Smart Irrigation System:
+## 🏗️ Struktur Proyek
 
 ```
-BackendSystem/
-├── SmartIrigationSystem/          # 🌱 This Laravel Backend
-│   ├── app/Http/Controllers/Api/   # API controllers
-│   ├── app/Models/                 # Eloquent models
-│   ├── database/migrations/        # Database schema
-│   ├── resources/views/            # Dashboard views
-│   └── routes/api.php              # API routes
-│
-├── mqtt_daemon_project/            # 🔧 Python MQTT & Testing
-│   ├── api_tests/                  # API testing scripts
-│   └── mqtt_daemon.py              # MQTT integration
-│
-└── documention/                    # 📚 Project Documentation
-    ├── IRRIGATION_LINES_SUMMARY.md
-    ├── PROJECT_STRUCTURE_UPDATE.md
-    └── HARDWARE_API_DOCS.md
+SmartIrigationSystem/
+├── app/Http/Controllers/Api/   # Controller API
+├── app/Models/                 # Model Eloquent
+├── database/migrations/        # Skema database
+├── database/seeders/           # Data awal
+├── resources/views/            # Tampilan dashboard
+└── routes/api.php              # Route API
 ```
 
-## 🔧 Installation & Setup
+## 🔧 Instalasi
 
-### Prerequisites
+### Kebutuhan Sistem
 - PHP 8.1+
 - Composer
 - MySQL/MariaDB
-- Node.js & NPM
 
-### Installation
+### Cara Instalasi
 ```bash
-# Clone and setup
+# Clone repository
 git clone https://github.com/RifkiFiransah/SmartIrigationSystem.git
 cd SmartIrigationSystem
 
-# Install dependencies
+# Install dependency
 composer install
-npm install
 
-# Environment setup
+# Setup environment
 cp .env.example .env
 php artisan key:generate
 
-# Database setup
+# Setup database
 php artisan migrate --seed
 
-# Start development server
+# Jalankan server
 php artisan serve
 ```
 
+Buka browser dan akses: `http://127.0.0.1:8000`
+
 ## 🌐 API Endpoints
 
-### Irrigation Lines Management
-- `GET /api/irrigation-lines` - Get all areas and lines summary
-- `GET /api/irrigation-lines/area/{areaName}` - Get specific area details  
-- `GET /api/irrigation-lines/analytics/efficiency` - Get efficiency analytics
-- `GET /api/irrigation-lines/line/{lineId}` - Get detailed line information
+### Sensor Data
+- `GET /api/sensor-readings/latest-per-device` - Data sensor terbaru per device
+- `GET /api/sensor-readings/hourly` - Data sensor per jam
+- `GET /api/sensor-readings/daily` - Data sensor harian
 
-### Zone Management  
-- `GET /api/zones` - Get zones summary
-- `GET /api/zones/{zoneName}` - Get zone details
+### Tangki Air
+- `GET /api/water-storage` - Status tangki air
+- `GET /api/water-storage/daily-usage` - Penggunaan air harian
 
-### Water Storage
-- `GET /api/water-storage` - Get tank status
-- `POST /api/water-storage/update-volume` - Update tank volume
+### Rencana Irigasi
+- `GET /api/irrigation/today-plan` - Rencana irigasi hari ini
 
-## 🖥️ Web Dashboard
+## 🖥️ Dashboard Web
 
-Access the interactive dashboards:
+Akses dashboard di: `http://127.0.0.1:8000`
 
-- **Main Dashboard**: `http://127.0.0.1:8000/dashboard`
-- **Irrigation Lines**: `http://127.0.0.1:8000/irrigation-lines`
+Fitur dashboard:
+- **Monitoring Real-time** - Data sensor dari 8 node
+- **Status Tangki** - Level air dan kapasitas
+- **Rencana Irigasi** - Jadwal penyiraman harian
+- **Grafik Penggunaan** - Riwayat penggunaan air
 
-## 🧪 Testing
+## 🛠️ Komponen Utama
 
-API testing scripts are located in `../mqtt_daemon_project/api_tests/`:
+### Model
+- **Device** - Manajemen perangkat IoT
+- **SensorData** - Data pembacaan sensor
+- **WaterStorage** - Manajemen tangki air
+- **IrrigationDailyPlan** - Rencana irigasi harian
 
-```bash
-# Navigate to testing directory
-cd ../mqtt_daemon_project/
+### Controller API
+- **SensorDataController** - API data sensor
+- **WaterStorageController** - API tangki air
+- **IrrigationPlanController** - API rencana irigasi
 
-# Test irrigation lines API
-python api_tests/test_irrigation_lines_api.py
+## 📊 Status Pengembangan
 
-# Test zone management
-python api_tests/test_zone_api.py
+### ✅ Selesai
+- [x] Dashboard monitoring real-time
+- [x] API sensor data lengkap
+- [x] Manajemen tangki air
+- [x] Rencana irigasi otomatis
+- [x] Database dan seeder data
+- [x] 8 node sensor aktif
 
-# Test line details
-python api_tests/test_line_details.py
-```
-
-## 📚 Documentation
-
-Comprehensive documentation is available in `../documention/`:
-
-- **[Irrigation Lines System](../documention/IRRIGATION_LINES_SUMMARY.md)** - Complete system documentation
-- **[Project Structure](../documention/PROJECT_STRUCTURE_UPDATE.md)** - File organization guide
-- **[Hardware API](../documention/HARDWARE_API_DOCS.md)** - Device integration docs
-
-## 🛠️ Key Models & Controllers
-
-### Models
-- **WaterStorage** - Tank and irrigation lines management
-- **Device** - IoT device integration
-- **SensorData** - Sensor readings and monitoring
-
-### Controllers
-- **IrrigationLineController** - Irrigation lines management API
-- **ZoneController** - Zone-based area management
-- **WaterStorageController** - Tank monitoring and control
-
-## 🎯 Development Status
-
-### ✅ Completed
-- [x] Area-based irrigation line management
-- [x] Efficiency analytics and scoring
-- [x] Real-time dashboard interface
-- [x] Complete API endpoints
-- [x] Database structure and seeding
-- [x] Node tracking per irrigation line
-
-### 🔄 In Progress
-- [ ] Mobile app integration
-- [ ] Advanced IoT device integration
-- [ ] Automated scheduling system
-- [ ] Weather integration
+### 🔄 Dalam Pengembangan
+- [ ] Integrasi aplikasi mobile
+- [ ] Sistem penjadwalan otomatis
+- [ ] Integrasi cuaca
+- [ ] Notifikasi alert
 
 ---
 
-**Laravel Version**: 11.x  
-**PHP Version**: 8.1+  
-**Database**: MySQL  
-**Frontend**: Alpine.js + Blade Templates
+## 🔧 Teknologi
 
-## Laravel Sponsors
+- **Framework**: Laravel 11.x
+- **Database**: MySQL
+- **Frontend**: Alpine.js + Blade
+- **PHP**: 8.1+
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 📝 Lisensi
 
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proyek ini menggunakan lisensi [MIT](https://opensource.org/licenses/MIT).
