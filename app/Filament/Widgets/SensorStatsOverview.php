@@ -25,132 +25,94 @@ class SensorStatsOverview extends StatsOverviewWidget
             ->latest('recorded_at')
             ->first();
 
-        // Statistik untuk perbandingan
+        // Statistik untuk perbandingan dengan 24 jam lalu
         $avgLast24h = SensorData::where('recorded_at', '>=', now()->subHours(24))
             ->selectRaw('
-                AVG(temperature) as avg_temp,
-                AVG(humidity) as avg_humidity,
-                AVG(soil_moisture) as avg_soil_moisture,
-                AVG(water_flow) as avg_water_flow
+                AVG(temperature_c) as avg_temp,
+                AVG(soil_moisture_pct) as avg_soil,
+                AVG(water_volume_l) as avg_volume,
+                AVG(light_lux) as avg_light,
+                AVG(wind_speed_ms) as avg_wind,
+                AVG(water_height_cm) as avg_height,
+                AVG(ina226_power_mw) as avg_power
             ')
             ->first();
 
         // Hitung perubahan dari rata-rata 24 jam
-        $tempChange = $latestData && $avgLast24h && $avgLast24h->avg_temp 
-            ? (($latestData->temperature - $avgLast24h->avg_temp) / $avgLast24h->avg_temp) * 100 
-            : 0;
-
-        $soilChange = $latestData && $avgLast24h && $avgLast24h->avg_soil_moisture 
-            ? (($latestData->soil_moisture - $avgLast24h->avg_soil_moisture) / $avgLast24h->avg_soil_moisture) * 100 
-            : 0;
-
-        $humidityChange = $latestData && $avgLast24h && $avgLast24h->avg_humidity 
-            ? (($latestData->humidity - $avgLast24h->avg_humidity) / $avgLast24h->avg_humidity) * 100 
-            : 0;
-
-        $flowChange = $latestData && $avgLast24h && $avgLast24h->avg_water_flow 
-            ? (($latestData->water_flow - $avgLast24h->avg_water_flow) / $avgLast24h->avg_water_flow) * 100 
-            : 0;
+        $tempChange = $this->calculateChange($latestData?->temperature_c, $avgLast24h?->avg_temp);
+        $soilChange = $this->calculateChange($latestData?->soil_moisture_pct, $avgLast24h?->avg_soil);
+        $volumeChange = $this->calculateChange($latestData?->water_volume_l, $avgLast24h?->avg_volume);
+        $lightChange = $this->calculateChange($latestData?->light_lux, $avgLast24h?->avg_light);
+        $windChange = $this->calculateChange($latestData?->wind_speed_ms, $avgLast24h?->avg_wind);
+        $heightChange = $this->calculateChange($latestData?->water_height_cm, $avgLast24h?->avg_height);
+        $powerChange = $this->calculateChange($latestData?->ina226_power_mw, $avgLast24h?->avg_power);
 
         return [
-            Stat::make('Suhu Terkini', $this->formatTemperature($latestData))
-                ->description($this->getTemperatureDescription($latestData, $tempChange))
-                ->descriptionIcon($this->getTemperatureIcon($latestData))
-                ->color($this->getTemperatureColor($latestData))
-                ->chart($this->getTemperatureChart())
-                ->extraAttributes([
-                    'class' => 'relative overflow-hidden',
-                ]),
+            Stat::make('Suhu', $this->formatValue($latestData?->temperature_c, '°C'))
+                ->description($this->getSensorDescription('Suhu', $tempChange, $latestData?->temperature_c, [15, 35]))
+                ->descriptionIcon($this->getIcon($latestData?->temperature_c, [15, 35], 'heroicon-m-fire', 'heroicon-m-sun', 'heroicon-m-cube-transparent'))
+                ->color($this->getColor($latestData?->temperature_c, [15, 35]))
+                ->chart($this->getMiniChart('temperature_c')),
 
-            Stat::make('Kelembaban Tanah', $this->formatSoilMoisture($latestData))
-                ->description($this->getSoilMoistureDescription($latestData, $soilChange))
-                ->descriptionIcon($this->getSoilMoistureIcon($latestData))
-                ->color($this->getSoilMoistureColor($latestData))
-                ->chart($this->getSoilMoistureChart())
-                ->extraAttributes([
-                    'class' => 'relative overflow-hidden',
-                ]),
-            
-            Stat::make('Kelembaban Udara', $this->formatHumidity($latestData))
-                ->description($this->getHumidityDescription($latestData, $humidityChange))
-                ->descriptionIcon($this->getHumidityIcon($latestData))
-                ->color($this->getHumidityColor($latestData))
-                ->chart($this->getHumidityChart())
-                ->extraAttributes([
-                    'class' => 'relative overflow-hidden',
-                ]),
+            Stat::make('Kelembapan Tanah', $this->formatValue($latestData?->soil_moisture_pct, '%'))
+                ->description($this->getSensorDescription('Tanah', $soilChange, $latestData?->soil_moisture_pct, [30, 70]))
+                ->descriptionIcon($this->getIcon($latestData?->soil_moisture_pct, [30, 70], 'heroicon-m-beaker', 'heroicon-m-globe-alt', 'heroicon-m-exclamation-triangle'))
+                ->color($this->getColor($latestData?->soil_moisture_pct, [30, 70]))
+                ->chart($this->getMiniChart('soil_moisture_pct')),
 
-            Stat::make('Aliran Air', $this->formatWaterFlow($latestData))
-                ->description($this->getWaterFlowDescription($latestData, $flowChange))
-                ->descriptionIcon($this->getWaterFlowIcon($latestData))
-                ->color($this->getWaterFlowColor($latestData))
-                ->chart($this->getWaterFlowChart())
-                ->extraAttributes([
-                    'class' => 'relative overflow-hidden',
-                ]),
+            Stat::make('Volume Air', $this->formatValue($latestData?->water_volume_l, ' L'))
+                ->description($this->getSensorDescription('Volume', $volumeChange, $latestData?->water_volume_l, [50, 200]))
+                ->descriptionIcon($this->getIcon($latestData?->water_volume_l, [50, 200], 'heroicon-m-arrow-up', 'heroicon-m-arrow-right', 'heroicon-m-arrow-down'))
+                ->color($this->getColor($latestData?->water_volume_l, [50, 200]))
+                ->chart($this->getMiniChart('water_volume_l')),
 
-            // Stat::make('Status System', $this->getSystemStatus())
-            //     ->description($this->getSystemDescription())
-            //     ->descriptionIcon($this->getSystemIcon())
-            //     ->color($this->getSystemColor())
-            //     ->extraAttributes([
-            //         'class' => 'relative overflow-hidden',
-            //     ]),
+            Stat::make('Cahaya', $this->formatValue($latestData?->light_lux, ' Lux'))
+                ->description($this->getSensorDescription('Cahaya', $lightChange, $latestData?->light_lux, [1000, 50000]))
+                ->descriptionIcon($this->getIcon($latestData?->light_lux, [1000, 50000], 'heroicon-m-sun', 'heroicon-m-light-bulb', 'heroicon-m-moon'))
+                ->color($this->getColor($latestData?->light_lux, [1000, 50000]))
+                ->chart($this->getMiniChart('light_lux')),
+
+            Stat::make('Angin', $this->formatValue($latestData?->wind_speed_ms, ' m/s'))
+                ->description($this->getSensorDescription('Angin', $windChange, $latestData?->wind_speed_ms, [2, 10]))
+                ->descriptionIcon($this->getIcon($latestData?->wind_speed_ms, [2, 10], 'heroicon-m-arrow-trending-up', 'heroicon-m-minus', 'heroicon-m-pause'))
+                ->color($this->getColor($latestData?->wind_speed_ms, [2, 10]))
+                ->chart($this->getMiniChart('wind_speed_ms')),
+
+            Stat::make('Tinggi Air', $this->formatValue($latestData?->water_height_cm, ' cm'))
+                ->description($this->getSensorDescription('Tinggi', $heightChange, $latestData?->water_height_cm, [20, 80]))
+                ->descriptionIcon($this->getIcon($latestData?->water_height_cm, [20, 80], 'heroicon-m-arrow-up', 'heroicon-m-minus', 'heroicon-m-arrow-down'))
+                ->color($this->getColor($latestData?->water_height_cm, [20, 80]))
+                ->chart($this->getMiniChart('water_height_cm')),
+
+            Stat::make('Daya INA226', $this->formatValue($latestData?->ina226_power_mw, ' mW'))
+                ->description($this->getSensorDescription('Daya', $powerChange, $latestData?->ina226_power_mw, [100, 1000]))
+                ->descriptionIcon($this->getIcon($latestData?->ina226_power_mw, [100, 1000], 'heroicon-m-bolt', 'heroicon-m-battery-50', 'heroicon-m-battery-0'))
+                ->color($this->getColor($latestData?->ina226_power_mw, [100, 1000]))
+                ->chart($this->getMiniChart('ina226_power_mw')),
+
+            Stat::make('Status Sistem', $this->getSystemStatus())
+                ->description($this->getSystemDescription())
+                ->descriptionIcon($this->getSystemIcon())
+                ->color($this->getSystemColor()),
         ];
     }
 
-    // Temperature methods
-    private function formatTemperature($latestData): string
+    private function calculateChange($current, $average): float
     {
-        return $latestData ? number_format($latestData->temperature, 1) . '°C' : 'N/A';
+        if (!$current || !$average || $average == 0) return 0;
+        return (($current - $average) / $average) * 100;
     }
 
-    private function getTemperatureDescription($latestData, $change): string
+    private function formatValue($value, $unit): string
     {
-        if (!$latestData) return 'Tidak ada data';
-        
-        $changeText = '';
-        if (abs($change) > 0.1) {
-            $changeText = sprintf(' (%s%.1f%%)', $change > 0 ? '+' : '', $change);
-        }
-        
-        return 'Update: ' . $latestData->recorded_at->diffForHumans() . $changeText;
+        return $value !== null ? number_format($value, 2) . $unit : 'N/A';
     }
 
-    private function getTemperatureIcon($latestData): string
+    private function getSensorDescription(string $type, float $change, $value, array $range): string
     {
-        if (!$latestData) return 'heroicon-m-question-mark-circle';
+        if ($value === null) return 'Tidak ada data';
         
-        return match (true) {
-            $latestData->temperature > 35 => 'heroicon-m-fire',
-            $latestData->temperature < 15 => 'heroicon-m-cube-transparent',
-            default => 'heroicon-m-sun'
-        };
-    }
-
-    private function getTemperatureColor($latestData): string
-    {
-        if (!$latestData) return 'gray';
-        
-        return match (true) {
-            $latestData->temperature > 38 => 'danger',
-            $latestData->temperature > 35 => 'warning',
-            $latestData->temperature < 10 => 'info',
-            default => 'success'
-        };
-    }
-
-    // Soil Moisture methods
-    private function formatSoilMoisture($latestData): string
-    {
-        return $latestData ? number_format($latestData->soil_moisture, 1) . '%' : 'N/A';
-    }
-
-    private function getSoilMoistureDescription($latestData, $change): string
-    {
-        if (!$latestData) return 'Tidak ada data';
-        
-        $status = $this->getSoilMoistureStatus($latestData->soil_moisture);
+        $status = $this->getStatus($value, $range);
         $changeText = '';
         if (abs($change) > 0.1) {
             $changeText = sprintf(' (%s%.1f%%)', $change > 0 ? '+' : '', $change);
@@ -159,142 +121,36 @@ class SensorStatsOverview extends StatsOverviewWidget
         return $status . $changeText;
     }
 
-    private function getSoilMoistureStatus($value): string
+    private function getStatus($value, array $range): string
     {
+        [$min, $max] = $range;
         return match (true) {
-            $value < 20 => 'Sangat Kering',
-            $value < 40 => 'Kering', 
-            $value < 60 => 'Optimal',
-            $value < 80 => 'Lembab',
-            default => 'Sangat Lembab'
-        };
-    }
-
-    private function getSoilMoistureIcon($latestData): string
-    {
-        if (!$latestData) return 'heroicon-m-question-mark-circle';
-        
-        return match (true) {
-            $latestData->soil_moisture < 25 => 'heroicon-m-exclamation-triangle',
-            $latestData->soil_moisture > 75 => 'heroicon-m-beaker',
-            default => 'heroicon-m-globe-alt'
-        };
-    }
-
-    private function getSoilMoistureColor($latestData): string
-    {
-        if (!$latestData) return 'gray';
-        
-        return match (true) {
-            $latestData->soil_moisture < 20 => 'danger',
-            $latestData->soil_moisture < 30 => 'warning',
-            $latestData->soil_moisture > 80 => 'info',
-            default => 'success'
-        };
-    }
-
-    // Humidity methods
-    private function formatHumidity($latestData): string
-    {
-        return $latestData ? number_format($latestData->humidity, 1) . '%' : 'N/A';
-    }
-
-    private function getHumidityDescription($latestData, $change): string
-    {
-        if (!$latestData) return 'Tidak ada data';
-        
-        $status = $this->getHumidityStatus($latestData->humidity);
-        $changeText = '';
-        if (abs($change) > 0.1) {
-            $changeText = sprintf(' (%s%.1f%%)', $change > 0 ? '+' : '', $change);
-        }
-        
-        return $status . $changeText;
-    }
-
-    private function getHumidityStatus($value): string
-    {
-        return match (true) {
-            $value < 30 => 'Sangat Rendah',
-            $value < 50 => 'Rendah',
-            $value < 70 => 'Normal',
-            $value < 85 => 'Tinggi',
+            $value < $min * 0.7 => 'Sangat Rendah',
+            $value < $min => 'Rendah',
+            $value <= $max => 'Normal',
+            $value <= $max * 1.3 => 'Tinggi',
             default => 'Sangat Tinggi'
         };
     }
 
-    private function getHumidityIcon($latestData): string
+    private function getIcon($value, array $range, string $high, string $normal, string $low): string
     {
-        if (!$latestData) return 'heroicon-m-question-mark-circle';
-        
+        if ($value === null) return 'heroicon-m-question-mark-circle';
+        [$min, $max] = $range;
         return match (true) {
-            $latestData->humidity < 30 => 'heroicon-m-sun',
-            $latestData->humidity > 80 => 'heroicon-m-cloud',
-            default => 'heroicon-m-cloud'
+            $value > $max => $high,
+            $value < $min => $low,
+            default => $normal
         };
     }
 
-    private function getHumidityColor($latestData): string
+    private function getColor($value, array $range): string
     {
-        if (!$latestData) return 'gray';
-        
+        if ($value === null) return 'gray';
+        [$min, $max] = $range;
         return match (true) {
-            $latestData->humidity < 25 => 'warning',
-            $latestData->humidity > 90 => 'info',
-            default => 'success'
-        };
-    }
-
-    // Water Flow methods
-    private function formatWaterFlow($latestData): string
-    {
-        return $latestData ? number_format($latestData->water_flow, 1) . ' L/h' : 'N/A';
-    }
-
-    private function getWaterFlowDescription($latestData, $change): string
-    {
-        if (!$latestData) return 'Tidak ada data';
-        
-        $status = $this->getWaterFlowStatus($latestData->water_flow);
-        $changeText = '';
-        if (abs($change) > 0.1) {
-            $changeText = sprintf(' (%s%.1f%%)', $change > 0 ? '+' : '', $change);
-        }
-        
-        return $status . $changeText;
-    }
-
-    private function getWaterFlowStatus($value): string
-    {
-        return match (true) {
-            $value == 0 => 'Tidak Ada Aliran',
-            $value < 50 => 'Aliran Rendah',
-            $value < 150 => 'Aliran Normal',
-            $value < 300 => 'Aliran Tinggi',
-            default => 'Aliran Sangat Tinggi'
-        };
-    }
-
-    private function getWaterFlowIcon($latestData): string
-    {
-        if (!$latestData) return 'heroicon-m-question-mark-circle';
-        
-        return match (true) {
-            $latestData->water_flow == 0 => 'heroicon-m-x-circle',
-            $latestData->water_flow < 50 => 'heroicon-m-minus-circle',
-            $latestData->water_flow > 200 => 'heroicon-m-arrow-up',
-            default => 'heroicon-m-arrow-right'
-        };
-    }
-
-    private function getWaterFlowColor($latestData): string
-    {
-        if (!$latestData) return 'gray';
-        
-        return match (true) {
-            $latestData->water_flow == 0 => 'danger',
-            $latestData->water_flow < 25 => 'warning',
-            $latestData->water_flow > 400 => 'info',
+            $value < $min * 0.5 || $value > $max * 1.5 => 'danger',
+            $value < $min || $value > $max => 'warning',
             default => 'success'
         };
     }
@@ -355,26 +211,6 @@ class SensorStatsOverview extends StatsOverviewWidget
     }
 
     // Chart methods untuk mini charts
-    private function getTemperatureChart(): array
-    {
-        return $this->getMiniChart('temperature');
-    }
-
-    private function getSoilMoistureChart(): array
-    {
-        return $this->getMiniChart('soil_moisture');
-    }
-
-    private function getHumidityChart(): array
-    {
-        return $this->getMiniChart('humidity');
-    }
-
-    private function getWaterFlowChart(): array
-    {
-        return $this->getMiniChart('water_flow');
-    }
-
     private function getMiniChart(string $field): array
     {
         $data = SensorData::where('recorded_at', '>=', now()->subHours(6))

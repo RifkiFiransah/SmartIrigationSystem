@@ -20,7 +20,8 @@ return new class extends Migration
             $table->float('water_flow')->nullable();
             $table->float('light_intensity')->nullable();
             $table->timestamp('recorded_at')->useCurrent();
-            $table->enum('status', ['normal', 'peringatan', 'kritis'])->default('normal');
+            // Use string for flexibility and avoid enum alter migrations
+            $table->string('status', 30)->default('Normal');
             $table->timestamps();
         });
     }

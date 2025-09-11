@@ -36,17 +36,16 @@ class MoistureTemperatureChart extends ChartWidget
         }
 
         // Group data by 2-hour intervals untuk mengurangi kepadatan
-        $groupedData = $data->groupBy(function ($item) {
+    $groupedData = $data->groupBy(function ($item) {
             $hour = \Carbon\Carbon::parse($item->recorded_at)->hour;
             // Group by 2-hour intervals
             $interval = floor($hour / 2) * 2;
             return sprintf('%02d:00', $interval);
-        })->map(function ($hourData) {
+    })->map(function ($hourData) {
             return [
-                'temperature' => round($hourData->avg('temperature'), 1),
-                'humidity' => round($hourData->avg('humidity'), 1),
-                'soil_moisture' => round($hourData->avg('soil_moisture'), 1),
-                'water_flow' => round($hourData->avg('water_flow'), 1),
+        'temperature' => round($hourData->avg('temperature_c'), 1),
+        'soil_moisture' => round($hourData->avg('soil_moisture_pct'), 1),
+        'water_volume' => round($hourData->avg('water_volume_l'), 2),
                 'time' => $hourData->first()->recorded_at,
             ];
         })->values();
@@ -60,13 +59,7 @@ class MoistureTemperatureChart extends ChartWidget
                     'borderColor' => '#ef4444',
                     'borderWidth' => 0,
                 ],
-                [
-                    'label' => 'Humidity (%)',
-                    'data' => $groupedData->pluck('humidity')->toArray(),
-                    'backgroundColor' => '#3b82f6',
-                    'borderColor' => '#3b82f6',
-                    'borderWidth' => 0,
-                ],
+                
                 [
                     'label' => 'Soil Moisture (%)',
                     'data' => $groupedData->pluck('soil_moisture')->toArray(),
@@ -75,8 +68,8 @@ class MoistureTemperatureChart extends ChartWidget
                     'borderWidth' => 0,
                 ],
                 [
-                    'label' => 'Water Flow (L/h)',
-                    'data' => $groupedData->pluck('water_flow')->toArray(),
+                    'label' => 'Water Volume (L)',
+                    'data' => $groupedData->pluck('water_volume')->toArray(),
                     'backgroundColor' => '#8b5cf6',
                     'borderColor' => '#8b5cf6',
                     'borderWidth' => 0,

@@ -25,9 +25,9 @@ class SensorDataResource extends Resource
 {
     protected static ?string $model = SensorData::class;
     protected static ?string $navigationIcon = 'heroicon-o-presentation-chart-bar';
-    protected static ?string $navigationLabel = 'Sensor Data';
-    protected static ?string $modelLabel = 'Sensor Data';
-    protected static ?string $pluralModelLabel = 'Sensor Data';
+    protected static ?string $navigationLabel = 'Data Sensor';
+    protected static ?string $modelLabel = 'Data Sensor';
+    protected static ?string $pluralModelLabel = 'Data Sensor';
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
@@ -35,7 +35,7 @@ class SensorDataResource extends Resource
         return $form
             ->schema([
                 Select::make('device_id')
-                    ->label('Device')
+                    ->label('Perangkat')
                     ->options(function () {
                         return Device::where('is_active', true)
                             ->get()
@@ -45,10 +45,17 @@ class SensorDataResource extends Resource
                     ->preload()
                     ->required()
                     ->live()
-                    ->placeholder('Select a device'),
+                    ->placeholder('Pilih perangkat'),
                     
+                DateTimePicker::make('device_ts')
+                    ->label('Waktu Perangkat (RTC)')
+                    ->timezone('Asia/Jakarta')
+                    ->displayFormat('d/m/Y H:i')
+                    ->seconds(false)
+                    ->helperText('Waktu dari perangkat (opsional). Jika kosong, gunakan Waktu Rekam.'),
+
                 DateTimePicker::make('recorded_at')
-                    ->label('Recorded At')
+                    ->label('Waktu Rekam (Server)')
                     ->default(now())
                     ->required()
                     ->timezone('Asia/Jakarta')
@@ -57,70 +64,116 @@ class SensorDataResource extends Resource
                     
                 Forms\Components\Grid::make(2)
                     ->schema([
-                        TextInput::make('temperature')
-                            ->label('Temperature (°C)')
+                        TextInput::make('temperature_c')
+                            ->label('Suhu (°C)')
                             ->numeric()
-                            ->required()
                             ->step(0.1)
                             ->minValue(-50)
                             ->maxValue(100)
                             ->suffix('°C')
                             ->placeholder('25.5'),
-                            
-                        TextInput::make('humidity')
-                            ->label('Humidity (%)')
+
+                        TextInput::make('soil_moisture_pct')
+                            ->label('Kelembapan Tanah (%)')
                             ->numeric()
-                            ->required()
-                            ->step(0.1)
+                            ->step(1)
                             ->minValue(0)
                             ->maxValue(100)
                             ->suffix('%')
-                            ->placeholder('65.0'),
-                    ]),
+                            ->placeholder('45'),
+                    ])
+                    ->columns(2),
                     
                 Forms\Components\Grid::make(2)
                     ->schema([
-                        TextInput::make('soil_moisture')
-                            ->label('Soil Moisture (%)')
+                        TextInput::make('water_height_cm')
+                            ->label('Tinggi Air (cm)')
                             ->numeric()
-                            ->required()
-                            ->step(0.1)
+                            ->step(1)
                             ->minValue(0)
-                            ->maxValue(100)
-                            ->suffix('%')
-                            ->placeholder('45.0'),
-                            
-                        TextInput::make('water_flow')
-                            ->label('Water Flow (L/h)')
+                            ->suffix('cm')
+                            ->placeholder('50'),
+
+                        TextInput::make('water_volume_l')
+                            ->label('Volume Air (L)')
                             ->numeric()
-                            ->required()
-                            ->step(0.1)
+                            ->step(0.01)
                             ->minValue(0)
-                            ->suffix('L/h')
-                            ->placeholder('150.0'),
-                    ]),
+                            ->suffix('L')
+                            ->placeholder('120.50'),
+                    ])
+                    ->columns(2),
                     
                 Forms\Components\Grid::make(2)
                     ->schema([
-                        TextInput::make('light_intensity')
-                            ->label('Light Intensity (lux)')
+                        TextInput::make('light_lux')
+                            ->label('Cahaya (lux)')
                             ->numeric()
                             ->step(1)
                             ->minValue(0)
                             ->suffix('lux')
                             ->placeholder('25000'),
-                            
-                        Select::make('status')
-                            ->label('Status')
-                            ->options([
-                                'normal' => 'Normal',
-                                'peringatan' => 'Peringatan', 
-                                'kritis' => 'Kritis',
-                            ])
-                            ->default('normal')
-                            ->required()
-                            ->native(false),
+
+                        TextInput::make('wind_speed_ms')
+                            ->label('Kecepatan Angin (m/s)')
+                            ->numeric()
+                            ->step(0.01)
+                            ->minValue(0)
+                            ->suffix('m/s')
+                            ->placeholder('3.5'),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Fieldset::make('INA226 (Daya)')
+                    ->schema([
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                TextInput::make('ina226_bus_voltage_v')
+                                    ->label('Tegangan Bus (V)')
+                                    ->numeric()
+                                    ->step(0.001)
+                                    ->minValue(0)
+                                    ->suffix('V'),
+                                TextInput::make('ina226_shunt_voltage_mv')
+                                    ->label('Tegangan Shunt (mV)')
+                                    ->numeric()
+                                    ->step(1)
+                                    ->suffix('mV'),
+                            ]),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                TextInput::make('ina226_current_ma')
+                                    ->label('Arus (mA)')
+                                    ->numeric()
+                                    ->step(0.001)
+                                    ->suffix('mA'),
+                                TextInput::make('ina226_power_mw')
+                                    ->label('Daya (mW)')
+                                    ->numeric()
+                                    ->step(0.001)
+                                    ->suffix('mW'),
+                            ]),
                     ]),
+
+                Forms\Components\Fieldset::make('Field Lama (opsional)')
+                    ->schema([
+                        TextInput::make('temperature')->label('Suhu Lama (°C)')->numeric()->step(0.1)->suffix('°C'),
+                        TextInput::make('humidity')->label('Kelembapan Udara (%)')->numeric()->step(0.1)->suffix('%'),
+                        TextInput::make('soil_moisture')->label('Kelembapan Tanah Lama (%)')->numeric()->step(0.1)->suffix('%'),
+                        TextInput::make('water_flow')->label('Aliran Air (L/h)')->numeric()->step(0.1)->suffix('L/h'),
+                        TextInput::make('light_intensity')->label('Intensitas Cahaya Lama (lux)')->numeric()->step(1)->suffix('lux'),
+                    ]),
+
+                Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'normal' => 'Normal',
+                        'peringatan' => 'Peringatan', 
+                        'kritis' => 'Kritis',
+                    ])
+                    ->default('normal')
+                    ->required()
+                    ->native(false),
             ]);
     }
 
@@ -129,23 +182,30 @@ class SensorDataResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('device.device_name')
-                    ->label('Device Name')
+                    ->label('Nama Perangkat')
                     ->searchable()
                     ->sortable()
                     ->weight('medium')
                     ->icon('heroicon-m-cpu-chip'),
                     
-                TextColumn::make('recorded_at')
-                    ->label('Recorded At')
+                TextColumn::make('device_ts')
+                    ->label('Waktu Perangkat')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->timezone('Asia/Jakarta')
-                    ->description(fn (SensorData $record): string => 
-                        $record->recorded_at->diffForHumans()
-                    ),
+                    ->description(fn (SensorData $record): string => $record->device_ts?->diffForHumans() ?? '—')
+                    ->toggleable(true, true),
+
+                TextColumn::make('recorded_at')
+                    ->label('Waktu Rekam (Server)')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->timezone('Asia/Jakarta')
+                    ->description(fn (SensorData $record): string => $record->recorded_at?->diffForHumans() ?? '—')
+                    ->toggleable(true, true),
                     
-                TextColumn::make('temperature')
-                    ->label('Temperature')
+                TextColumn::make('temperature_c')
+                    ->label('Suhu (°C)')
                     ->suffix('°C')
                     ->sortable()
                     ->numeric(decimalPlaces: 1)
@@ -154,44 +214,105 @@ class SensorDataResource extends Resource
                         $state > 30 => 'warning', 
                         $state < 10 => 'info',
                         default => 'success'
-                    }),
+                    })
+                    ->toggleable(),
                     
-                TextColumn::make('humidity')
-                    ->label('Humidity')
+                TextColumn::make('soil_moisture_pct')
+                    ->label('Kelembapan Tanah')
                     ->suffix('%')
                     ->sortable()
-                    ->numeric(decimalPlaces: 1)
-                    ->color(fn ($state) => match (true) {
-                        $state > 80 => 'info',
-                        $state < 30 => 'warning',
-                        default => 'success'
-                    }),
-                    
-                TextColumn::make('soil_moisture')
-                    ->label('Soil Moisture')
-                    ->suffix('%')
-                    ->sortable()
-                    ->numeric(decimalPlaces: 1)
+                    ->numeric()
                     ->color(fn ($state) => match (true) {
                         $state < 20 => 'danger',
                         $state < 40 => 'warning',
                         default => 'success'
-                    }),
+                    })
+                    ->toggleable(),
                     
-                TextColumn::make('water_flow')
-                    ->label('Water Flow')
-                    ->suffix('L/h')
+                TextColumn::make('water_height_cm')
+                    ->label('Tinggi Air')
+                    ->suffix(' cm')
                     ->sortable()
-                    ->numeric(decimalPlaces: 1)
-                    ->color('info'),
+                    ->numeric()
+                    ->toggleable(),
+
+                TextColumn::make('water_volume_l')
+                    ->label('Volume Air')
+                    ->suffix(' L')
+                    ->sortable()
+                    ->numeric(decimalPlaces: 2)
+                    ->toggleable(),
                     
-                TextColumn::make('light_intensity')
-                    ->label('Light')
-                    ->suffix('lux')
+                TextColumn::make('light_lux')
+                    ->label('Cahaya')
+                    ->suffix(' lux')
                     ->sortable()
                     ->numeric()
                     ->formatStateUsing(fn ($state) => number_format($state))
+                    ->color(fn ($state) => match (true) {
+                        $state < 200 => 'info',
+                        default => 'success'
+                    })
                     ->toggleable(),
+
+                TextColumn::make('wind_speed_ms')
+                    ->label('Kecepatan Angin')
+                    ->suffix(' m/s')
+                    ->sortable()
+                    ->numeric(decimalPlaces: 2)
+                    ->color(fn ($state) => match (true) {
+                        $state > 15 => 'danger',
+                        $state > 8 => 'warning',
+                        default => 'success'
+                    })
+                    ->toggleable(),
+
+                TextColumn::make('ina226_current_ma')
+                    ->label('Arus')
+                    ->suffix(' mA')
+                    ->sortable()
+                    ->numeric(decimalPlaces: 3)
+                    ->toggleable(),
+
+                TextColumn::make('ina226_bus_voltage_v')
+                    ->label('Tegangan Bus')
+                    ->suffix(' V')
+                    ->sortable()
+                    ->numeric(decimalPlaces: 3)
+                    ->toggleable(),
+
+                TextColumn::make('ina226_power_mw')
+                    ->label('Daya')
+                    ->suffix(' mW')
+                    ->sortable()
+                    ->numeric(decimalPlaces: 3)
+                    ->toggleable(),
+
+                // Legacy columns (hidden by default)
+                TextColumn::make('temperature')
+                    ->label('Suhu Lama')
+                    ->suffix('°C')
+                    ->numeric(decimalPlaces: 1)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('humidity')
+                    ->label('Kelembapan Udara')
+                    ->suffix('%')
+                    ->numeric(decimalPlaces: 1)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('soil_moisture')
+                    ->label('Kelembapan Tanah Lama')
+                    ->suffix('%')
+                    ->numeric(decimalPlaces: 1)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('water_flow')
+                    ->label('Aliran Air')
+                    ->suffix(' L/h')
+                    ->numeric(decimalPlaces: 1)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('light_intensity')
+                    ->label('Intensitas Cahaya Lama')
+                    ->suffix(' lux')
+                    ->toggleable(isToggledHiddenByDefault: true),
                     
                 TextColumn::make('status')
                     ->label('Status')
@@ -286,11 +407,11 @@ class SensorDataResource extends Resource
                         return $query
                             ->when(
                                 $data['temp_min'] !== null,
-                                fn (Builder $query): Builder => $query->where('temperature', '>=', $data['temp_min']),
+                                fn (Builder $query): Builder => $query->where('temperature_c', '>=', $data['temp_min']),
                             )
                             ->when(
                                 $data['temp_max'] !== null,
-                                fn (Builder $query): Builder => $query->where('temperature', '<=', $data['temp_max']),
+                                fn (Builder $query): Builder => $query->where('temperature_c', '<=', $data['temp_max']),
                             );
                     }),
             ])

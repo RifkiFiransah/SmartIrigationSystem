@@ -14,14 +14,15 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/auth/profile', [AuthController::class, 'profile'])->middleware('auth:sanctum');
 
-// ===== SENSOR DATA ROUTES (DENGAN AUTH) =====
-Route::apiResource('/sensor-readings', SensorDataController::class)->middleware('auth:sanctum');
-
 // ===== PUBLIC SENSOR DATA ROUTES (FOR FRONTEND) =====
+// Didefinisikan SEBELUM apiResource agar tidak tertangkap oleh route parameter {sensor_reading}
 Route::get('/sensor-readings/latest', [SensorDataController::class, 'latest']);
 Route::get('/sensor-readings/latest-per-device', [SensorDataController::class, 'latestPerDevice']);
 Route::get('/sensor-readings/hourly', [SensorDataController::class, 'hourlyData']);
 Route::get('/sensor-readings/daily', [SensorDataController::class, 'dailyData']);
+
+// ===== SENSOR DATA ROUTES (DENGAN AUTH) =====
+Route::apiResource('/sensor-readings', SensorDataController::class)->middleware('auth:sanctum');
 
 // ===== DATA MANAGEMENT ROUTES =====
 Route::prefix('data')->middleware('auth:sanctum')->group(function () {
@@ -35,9 +36,15 @@ Route::prefix('water-storage')->group(function () {
     // Public routes for reading data
     Route::get('/', [WaterStorageController::class, 'index']);
     Route::get('/tank/{tankName}', [WaterStorageController::class, 'getByTankName']);
+    Route::get('/daily-usage', [WaterStorageController::class, 'dailyUsage']);
     
     // Protected route for updating volume (for IoT devices)
     Route::post('/update-volume', [WaterStorageController::class, 'updateVolume'])->middleware('auth:sanctum');
+});
+
+// ===== IRRIGATION ROUTES =====
+Route::prefix('irrigation')->group(function () {
+    Route::get('/today-plan', [IrrigationController::class, 'todayPlan']);
 });
 
 // ===== ZONE MANAGEMENT ROUTES =====
@@ -54,33 +61,35 @@ Route::prefix('irrigation-lines')->group(function () {
     Route::get('/line/{lineId}', [App\Http\Controllers\Api\IrrigationLineController::class, 'getLineDetails']);
 });
 
-// ===== IRRIGATION CONTROL ROUTES =====
-Route::prefix('irrigation')->group(function () {
-    // Public endpoints untuk reading (dashboard)
-    Route::get('/controls', [IrrigationController::class, 'getControls']);
-    Route::get('/status', [IrrigationController::class, 'getStatus']);
-    Route::get('/logs', [IrrigationController::class, 'getLogs']);
-    
-    // Control endpoints (bisa dibuat public untuk hardware atau protected)
-    Route::post('/start', [IrrigationController::class, 'startIrrigation']);
-    Route::post('/stop', [IrrigationController::class, 'stopIrrigation']);
-    Route::post('/toggle-mode', [IrrigationController::class, 'toggleMode']);
-    
-    // System endpoints
-    Route::post('/run-scheduled', [IrrigationController::class, 'runScheduled']);
-    Route::post('/emergency-stop', [IrrigationController::class, 'emergencyStop']);
+// ===== NODE VALVE ROUTES (Per-node open/close control) =====
+Route::prefix('nodes/{nodeUid}/valve')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\NodeValveController::class, 'status']);
+    Route::post('/open', [App\Http\Controllers\Api\NodeValveController::class, 'open']);
+    Route::post('/close', [App\Http\Controllers\Api\NodeValveController::class, 'close']);
+    Route::post('/mode', [App\Http\Controllers\Api\NodeValveController::class, 'setMode']);
+    Route::post('/evaluate', [App\Http\Controllers\Api\NodeValveController::class, 'evaluate']);
+    Route::get('/schedules', [App\Http\Controllers\Api\NodeValveController::class, 'listSchedules']);
 });
+
+// legacy irrigation control routes removed
 
 // ===== HARDWARE DATA TRANSFER ROUTES (FOR MQTT/IoT DEVICES) =====
 Route::prefix('transfer')->group(function () {
     // Public endpoints untuk hardware tanpa auth (gunakan API key jika diperlukan)
     Route::post('/sensor-data', [DataTransferController::class, 'storeSensorData']);
     Route::post('/water-level', [DataTransferController::class, 'storeWaterLevel']);
+    Route::post('/simple-water-level', [DataTransferController::class, 'simpleWaterLevel']);
     Route::post('/heartbeat', [DataTransferController::class, 'heartbeat']);
     
     // GET endpoints untuk hardware mendapatkan konfigurasi
     Route::get('/device-config/{device_id}', [DataTransferController::class, 'getDeviceConfig']);
     Route::get('/system-status', [DataTransferController::class, 'getSystemStatus']);
+});
+
+// ===== IRRIGATION PLAN (SIMPLE) =====
+Route::prefix('irrigation')->group(function () {
+    Route::get('/today-plan', [\App\Http\Controllers\Api\IrrigationPlanController::class, 'today']);
+    Route::post('/session-report', [\App\Http\Controllers\Api\IrrigationPlanController::class, 'report']);
 });
 
 // ===== USER ROUTE =====
@@ -94,3 +103,8 @@ Route::get('/user', function (Request $request) {
         ]
     ]);
 })->middleware('auth:sanctum');
+
+// ===== SIMPLE HEALTH CHECK (PUBLIC) =====
+Route::get('/health', function(){
+    return response()->json(['ok'=>true,'time'=>now()->toDateTimeString()]);
+});

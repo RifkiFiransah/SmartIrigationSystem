@@ -124,4 +124,38 @@ class WaterStorageController extends Controller
             ]
         ]);
     }
+    
+    /**
+     * GET /api/water-storage/daily-usage?tank_id=1&days=30
+     * Jika tank_id tidak dikirim dan hanya satu tangki, pakai yang pertama.
+     */
+    public function dailyUsage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'tank_id' => 'nullable|integer|exists:water_storages,id',
+            'days' => 'nullable|integer|min:1|max:180',
+        ]);
+
+        $days = $validated['days'] ?? 30;
+        $query = WaterStorage::query();
+        if (isset($validated['tank_id'])) {
+            $query->where('id', $validated['tank_id']);
+        }
+        $storage = $query->first();
+        if (!$storage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Water storage not found'
+            ], 404);
+        }
+
+        $data = $storage->getDailyUsage($days);
+        return response()->json([
+            'success' => true,
+            'tank_id' => $storage->id,
+            'tank_name' => $storage->tank_name,
+            'days' => $days,
+            'data' => $data,
+        ]);
+    }
 }

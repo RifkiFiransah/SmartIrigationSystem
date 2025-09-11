@@ -99,6 +99,7 @@ class DataTransferController extends Controller
             ]);
 
             $waterStorage = WaterStorage::findOrFail($validated['tank_id']);
+            $oldVolume = $waterStorage->current_volume_liters;
             
             // Pastikan volume tidak melebihi kapasitas
             $newVolume = min($validated['current_volume'], $waterStorage->total_capacity);
@@ -119,6 +120,20 @@ class DataTransferController extends Controller
             }
             
             $waterStorage->save();
+
+            // Log penggunaan jika menurun
+            $delta = $oldVolume - $waterStorage->current_volume_liters;
+            if ($delta > 0.01) {
+                $waterStorage->usageLogs()->create([
+                    'usage_date' => now()->toDateString(),
+                    'volume_used_l' => $delta,
+                    'source' => 'manual',
+                    'meta' => [
+                        'method' => 'storeWaterLevel',
+                        'sensor_reading' => $validated['sensor_reading'] ?? null,
+                    ],
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -145,6 +160,55 @@ class DataTransferController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update water level',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Endpoint sederhana: kirim ketinggian air (cm) -> sistem hitung volume otomatis
+     * POST /api/transfer/simple-water-level
+     * Params: tank_id, water_height_cm
+     */
+    public function simpleWaterLevel(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'tank_id' => 'required|integer|exists:water_storages,id',
+                'water_height_cm' => 'required|numeric|min:0',
+                'timestamp' => 'nullable|date',
+            ]);
+
+            $storage = WaterStorage::findOrFail($validated['tank_id']);
+            $old = $storage->current_volume_liters;
+            $storage->updateFromHeight($validated['water_height_cm']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Water height processed',
+                'data' => [
+                    'tank_id' => $storage->id,
+                    'tank_name' => $storage->tank_name,
+                    'height_cm' => $storage->last_height_cm,
+                    'capacity_liters' => $storage->capacity_liters,
+                    'current_volume_liters' => $storage->current_volume_liters,
+                    'percentage' => $storage->percentage,
+                    'delta_used_l' => max($old - $storage->current_volume_liters, 0),
+                    'status' => $storage->status,
+                    'recorded_at' => $storage->last_height_recorded_at?->toISOString(),
+                    'server_time' => now()->toISOString(),
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid data format',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process water height',
                 'error' => $e->getMessage()
             ], 500);
         }

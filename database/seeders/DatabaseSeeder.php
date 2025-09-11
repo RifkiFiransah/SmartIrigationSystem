@@ -17,7 +17,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             DeviceSeeder::class,
             SensorDataSeeder::class,
-            WaterStorageSeederMultiNode::class
+            WaterStorageSeederSingle::class,
+            IrrigationValveSeeder::class,
         ]);
     }
 }

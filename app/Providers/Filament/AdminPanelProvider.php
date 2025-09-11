@@ -2,13 +2,22 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Resources\DeviceResource;
+use App\Filament\Resources\IrrigationControlResource;
+use App\Filament\Resources\SensorDataResource;
+use App\Filament\Resources\IrrigationValveScheduleResource;
+use App\Filament\Resources\WaterStorageResource;
 use App\Filament\Widgets\SensorDataBarChart;
 use App\Filament\Widgets\SensorStatsOverview;
 use App\Filament\Widgets\TemperatureChart;
-use App\Filament\Widgets\HumidityChart;
 use App\Filament\Widgets\SoilMoistureChart;
 use App\Filament\Widgets\WaterFlowChart;
 use App\Filament\Widgets\RealtimeStatusChart;
+use App\Filament\Widgets\LightLuxChart;
+use App\Filament\Widgets\WindSpeedChart;
+use App\Filament\Widgets\WaterHeightChart;
+use App\Filament\Widgets\Ina226MetricsChart;
+use App\Filament\Widgets\ComprehensiveSensorChart;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -38,6 +47,13 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->resources([
+                DeviceResource::class,
+                IrrigationControlResource::class, // repurposed to Node Valves
+                IrrigationValveScheduleResource::class,
+                SensorDataResource::class,
+                WaterStorageResource::class
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -48,11 +64,15 @@ class AdminPanelProvider extends PanelProvider
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
                 SensorStatsOverview::class,
+                ComprehensiveSensorChart::class,
                 SensorDataBarChart::class,
                 TemperatureChart::class,
-                HumidityChart::class,
                 SoilMoistureChart::class,
                 WaterFlowChart::class,
+                LightLuxChart::class,
+                WindSpeedChart::class,
+                WaterHeightChart::class,
+                Ina226MetricsChart::class,
                 RealtimeStatusChart::class,
             ])
             ->middleware([

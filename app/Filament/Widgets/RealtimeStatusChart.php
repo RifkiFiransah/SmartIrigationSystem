@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class RealtimeStatusChart extends ChartWidget
 {
     protected static ?string $heading = 'Real-time System Status';
-    protected static ?int $sort = 7;
+    protected static ?int $sort = 999;
     protected int | string | array $columnSpan = 'full';
     
     // Refresh setiap 30 detik

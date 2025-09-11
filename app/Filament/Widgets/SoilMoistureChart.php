@@ -17,9 +17,9 @@ class SoilMoistureChart extends ChartWidget
         // Get hourly data for last 24 hours - only soil moisture
         $data = SensorData::select(
             DB::raw('HOUR(recorded_at) as hour'),
-            DB::raw('AVG(soil_moisture) as avg_moisture'),
-            DB::raw('MIN(soil_moisture) as min_moisture'),
-            DB::raw('MAX(soil_moisture) as max_moisture')
+            DB::raw('AVG(soil_moisture_pct) as avg_moisture'),
+            DB::raw('MIN(soil_moisture_pct) as min_moisture'),
+            DB::raw('MAX(soil_moisture_pct) as max_moisture')
         )
         ->where('recorded_at', '>=', now()->subHours(24))
         ->groupBy(DB::raw('HOUR(recorded_at)'))

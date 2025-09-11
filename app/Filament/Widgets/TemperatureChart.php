@@ -17,9 +17,9 @@ class TemperatureChart extends ChartWidget
         // Get hourly data for last 24 hours
         $data = SensorData::select(
             DB::raw('HOUR(recorded_at) as hour'),
-            DB::raw('AVG(temperature) as avg_temp'),
-            DB::raw('MIN(temperature) as min_temp'),
-            DB::raw('MAX(temperature) as max_temp')
+            DB::raw('AVG(temperature_c) as avg_temp'),
+            DB::raw('MIN(temperature_c) as min_temp'),
+            DB::raw('MAX(temperature_c) as max_temp')
         )
         ->where('recorded_at', '>=', now()->subHours(24))
         ->groupBy(DB::raw('HOUR(recorded_at)'))

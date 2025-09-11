@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 class WaterFlowChart extends ChartWidget
 {
-    protected static ?string $heading = 'Water Flow Rate (L/h)';
+    protected static ?string $heading = 'Water Volume (L)';
     protected static ?int $sort = 6;
     protected int | string | array $columnSpan = 'half';
 
@@ -19,7 +19,7 @@ class WaterFlowChart extends ChartWidget
 
     protected function getData(): array
     {
-        // Ambil data 7 hari terakhir
+    // Ambil data 7 hari terakhir
         $data = SensorData::where('recorded_at', '>=', Carbon::now()->subDays(7))
             ->orderBy('recorded_at')
             ->get()
@@ -27,7 +27,7 @@ class WaterFlowChart extends ChartWidget
                 return Carbon::parse($item->recorded_at)->format('Y-m-d');
             })
             ->map(function ($dayData) {
-                return $dayData->avg('water_flow');
+        return $dayData->avg('water_volume_l');
             });
 
         $labels = $data->keys()->toArray();
@@ -36,7 +36,7 @@ class WaterFlowChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Average Water Flow',
+                    'label' => 'Average Water Volume',
                     'data' => $values,
                     'backgroundColor' => 'rgba(54, 162, 235, 0.2)',
                     'borderColor' => 'rgba(54, 162, 235, 1)',
@@ -63,7 +63,7 @@ class WaterFlowChart extends ChartWidget
                     'beginAtZero' => true,
                     'title' => [
                         'display' => true,
-                        'text' => 'Flow Rate (L/h)'
+                        'text' => 'Volume (L)'
                     ]
                 ],
                 'x' => [

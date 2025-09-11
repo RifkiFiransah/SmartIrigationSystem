@@ -23,6 +23,9 @@ class WaterStorage extends Model
         'device_id',
         'associated_devices',
         'capacity_liters',
+    'height_cm',
+    'calibration_offset_cm',
+    'last_height_cm',
         'current_volume_liters',
         'max_daily_usage',
         'status',
@@ -34,6 +37,9 @@ class WaterStorage extends Model
         'current_volume_liters' => 'decimal:2',
         'max_daily_usage' => 'decimal:2',
         'area_size_sqm' => 'decimal:2',
+    'height_cm' => 'decimal:2',
+    'calibration_offset_cm' => 'decimal:2',
+    'last_height_cm' => 'decimal:2',
         'total_lines' => 'integer',
         'percentage' => 'decimal:2',
         'associated_devices' => 'array',
@@ -44,6 +50,12 @@ class WaterStorage extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    // Relasi ke usage logs
+    public function usageLogs()
+    {
+        return $this->hasMany(WaterUsageLog::class)->latest('usage_date');
     }
 
     // Method untuk mendapatkan semua device di zona ini
@@ -123,9 +135,58 @@ class WaterStorage extends Model
     // Method untuk update volume
     public function updateVolume(float $newVolume): void
     {
+        $old = $this->current_volume_liters;
         $this->current_volume_liters = min($newVolume, $this->capacity_liters);
         $this->status = $this->auto_status;
         $this->save();
+
+        // Catat penggunaan jika volume turun
+        $delta = $old - $this->current_volume_liters;
+        if ($delta > 0.01) {
+            $this->usageLogs()->create([
+                'usage_date' => now()->toDateString(),
+                'volume_used_l' => $delta,
+                'source' => 'adjust',
+                'meta' => [
+                    'method' => 'updateVolume',
+                ],
+            ]);
+        }
+    }
+
+    // Hitung volume dari ketinggian (digunakan endpoint sederhana)
+    public function updateFromHeight(?float $measuredHeightCm, ?float $providedCapacity = null): void
+    {
+        if (!$measuredHeightCm || $measuredHeightCm < 0 || !$this->height_cm || $this->height_cm <= 0) {
+            return; // tidak cukup data
+        }
+
+        $effectiveHeight = max($measuredHeightCm - ($this->calibration_offset_cm ?? 0), 0);
+        $ratio = min($effectiveHeight / $this->height_cm, 1);
+        $capacity = $providedCapacity ?: $this->capacity_liters;
+
+        $newVolume = round($ratio * $capacity, 2);
+        $old = $this->current_volume_liters;
+
+        $this->last_height_cm = $measuredHeightCm;
+        $this->last_height_recorded_at = now();
+        $this->current_volume_liters = min($newVolume, $capacity);
+        $this->status = $this->auto_status;
+        $this->save();
+
+        $delta = $old - $this->current_volume_liters;
+        if ($delta > 0.01) {
+            $this->usageLogs()->create([
+                'usage_date' => now()->toDateString(),
+                'volume_used_l' => $delta,
+                'source' => 'auto_calc',
+                'meta' => [
+                    'method' => 'updateFromHeight',
+                    'measured_height_cm' => $measuredHeightCm,
+                    'ratio' => $ratio,
+                ],
+            ]);
+        }
     }
 
     // Method untuk prediksi kehabisan air
@@ -221,5 +282,27 @@ class WaterStorage extends Model
         if ($litersPerSqmPerDay <= 5) return 80;
         if ($litersPerSqmPerDay <= 8) return 60;
         return 40;
+    }
+
+    // Total penggunaan hari ini
+    public function getTodayUsageAttribute(): float
+    {
+        return (float) ($this->usageLogs()->whereDate('usage_date', today())->sum('volume_used_l') ?: 0);
+    }
+
+    // Ambil agregasi penggunaan harian terakhir n hari (default 30)
+    public function getDailyUsage(int $days = 30)
+    {
+        $from = now()->subDays($days - 1)->toDateString();
+        return $this->usageLogs()
+            ->selectRaw('usage_date, SUM(volume_used_l) as total_l')
+            ->where('usage_date', '>=', $from)
+            ->groupBy('usage_date')
+            ->orderBy('usage_date')
+            ->get()
+            ->map(fn($r)=>[
+                'date' => $r->usage_date,
+                'total_l' => (float) $r->total_l,
+            ]);
     }
 }

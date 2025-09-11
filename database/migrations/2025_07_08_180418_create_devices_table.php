@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('device_id')->unique();
             $table->string('device_name')->unique();
-            $table->string('location');
+            $table->string('location')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->timestamp('last_seen_at')->nullable();
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }

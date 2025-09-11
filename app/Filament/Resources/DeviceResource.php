@@ -20,28 +20,31 @@ class DeviceResource extends Resource
     protected static ?string $model = Device::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cpu-chip';
+    protected static ?string $navigationLabel = 'Perangkat';
+    protected static ?string $modelLabel = 'Perangkat';
+    protected static ?string $pluralModelLabel = 'Perangkat';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 TextInput::make('device_id')
-                    ->label('Device ID')
-                    ->placeholder('Auto generated Device ID')
+                    ->label('ID Perangkat')
+                    ->placeholder('ID Perangkat (otomatis)')
                     ->readOnly()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 TextInput::make('device_name')
-                    ->label('Device Name')
+                    ->label('Nama Perangkat')
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 TextInput::make('location')
-                    ->label('Location')
+                    ->label('Lokasi')
                     ->required()
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Is Active')
+                    ->label('Aktif')
                     ->default(true)
                     ->inline()
                     ->required(),
@@ -54,20 +57,25 @@ class DeviceResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('device_id')
-                    ->label('Device ID')
+                    ->label('ID Perangkat')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('device_name')
-                    ->label('Device Name')
+                    ->label('Nama Perangkat')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('location')
-                    ->label('Location')
+                    ->label('Lokasi')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('is_active')
-                    ->label('Is Active')
-                    ->toggleable(),
+                    ->label('Status Aktif')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        '1' => 'success',
+                        '0' => 'danger',
+                    })
+                    ->formatStateUsing(fn (string $state): string => $state ? 'Aktif' : 'Tidak Aktif'),
             ])
             ->filters([
                 //

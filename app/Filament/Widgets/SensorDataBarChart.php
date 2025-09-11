@@ -15,12 +15,11 @@ class SensorDataBarChart extends ChartWidget
     protected function getData(): array
     {
         // Get data for last 7 days
-        $data = SensorData::select(
+    $data = SensorData::select(
             DB::raw('DATE(recorded_at) as date'),
-            DB::raw('AVG(temperature) as avg_temp'),
-            DB::raw('AVG(humidity) as avg_humidity'),
-            DB::raw('AVG(soil_moisture) as avg_moisture'),
-            DB::raw('AVG(water_flow) as avg_flow')
+            DB::raw('AVG(temperature_c) as avg_temp'),
+            DB::raw('AVG(soil_moisture_pct) as avg_moisture'),
+            DB::raw('AVG(water_volume_l) as avg_volume')
         )
         ->where('recorded_at', '>=', now()->subDays(7))
         ->groupBy(DB::raw('DATE(recorded_at)'))
@@ -29,16 +28,14 @@ class SensorDataBarChart extends ChartWidget
 
         $labels = [];
         $temperatureData = [];
-        $humidityData = [];
         $moistureData = [];
-        $waterFlowData = [];
+    $waterFlowData = [];
 
         foreach ($data as $item) {
             $labels[] = \Carbon\Carbon::parse($item->date)->format('M d');
             $temperatureData[] = round($item->avg_temp, 1);
-            $humidityData[] = round($item->avg_humidity, 1);
             $moistureData[] = round($item->avg_moisture, 1);
-            $waterFlowData[] = round($item->avg_flow, 1);
+            $waterFlowData[] = round($item->avg_volume, 2);
         }
 
         return [
@@ -50,13 +47,7 @@ class SensorDataBarChart extends ChartWidget
                     'borderColor' => 'rgba(255, 99, 132, 1)',
                     'borderWidth' => 1,
                 ],
-                [
-                    'label' => 'Humidity (%)',
-                    'data' => $humidityData,
-                    'backgroundColor' => 'rgba(54, 162, 235, 0.8)',
-                    'borderColor' => 'rgba(54, 162, 235, 1)',
-                    'borderWidth' => 1,
-                ],
+                
                 [
                     'label' => 'Soil Moisture (%)',
                     'data' => $moistureData,
@@ -65,12 +56,12 @@ class SensorDataBarChart extends ChartWidget
                     'borderWidth' => 1,
                 ],
                 [
-                    'label' => 'Water Flow (L/h)',
+                    'label' => 'Water Volume (L)',
                     'data' => $waterFlowData,
                     'backgroundColor' => 'rgba(153, 102, 255, 0.8)',
                     'borderColor' => 'rgba(153, 102, 255, 1)',
                     'borderWidth' => 1,
-                    'yAxisID' => 'y1', // Different scale for water flow
+                    'yAxisID' => 'y1',
                 ],
             ],
             'labels' => $labels,
@@ -94,7 +85,7 @@ class SensorDataBarChart extends ChartWidget
                 ],
                 'title' => [
                     'display' => true,
-                    'text' => 'Daily Average Sensor Readings',
+                        'text' => 'Daily Average: Temperature / Soil Moisture / Water Volume',
                 ],
             ],
             'scales' => [
@@ -102,7 +93,7 @@ class SensorDataBarChart extends ChartWidget
                     'beginAtZero' => true,
                     'title' => [
                         'display' => true,
-                        'text' => 'Temperature (°C) / Humidity (%) / Soil Moisture (%)',
+                        'text' => 'Temperature (°C) / Soil Moisture (%)',
                     ],
                     'max' => 100,
                 ],
@@ -112,7 +103,7 @@ class SensorDataBarChart extends ChartWidget
                     'position' => 'right',
                     'title' => [
                         'display' => true,
-                        'text' => 'Water Flow (L/h)',
+                        'text' => 'Water Volume (L)',
                     ],
                     'grid' => [
                         'drawOnChartArea' => false,

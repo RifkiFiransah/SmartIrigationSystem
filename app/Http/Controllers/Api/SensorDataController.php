@@ -38,6 +38,10 @@ class SensorDataController extends Controller
                 'humidity' => 'nullable|numeric|between:0,100',
                 'soil_moisture' => 'nullable|numeric|between:0,100',
                 'water_flow' => 'nullable|numeric|min:0',
+                'water_height_cm' => 'nullable|numeric|min:0',
+                'light_lux' => 'nullable|numeric|min:0',
+                'temperature_c' => 'nullable|numeric|between:-50,100',
+                'soil_moisture_pct' => 'nullable|integer|between:0,100',
                 'recorded_at' => 'nullable|date',
                 'status' => 'nullable|in:normal,alert,critical'
             ]);
@@ -99,6 +103,10 @@ class SensorDataController extends Controller
                 'humidity' => 'nullable|numeric|between:0,100',
                 'soil_moisture' => 'nullable|numeric|between:0,100',
                 'water_flow' => 'nullable|numeric|min:0',
+                'water_height_cm' => 'nullable|numeric|min:0',
+                'light_lux' => 'nullable|numeric|min:0',
+                'temperature_c' => 'nullable|numeric|between:-50,100',
+                'soil_moisture_pct' => 'nullable|integer|between:0,100',
                 'recorded_at' => 'nullable|date',
                 'status' => 'nullable|in:normal,alert,critical'
             ]);
@@ -274,6 +282,10 @@ class SensorDataController extends Controller
                     'sd1.humidity', 
                     'sd1.soil_moisture',
                     'sd1.water_flow',
+                    'sd1.water_height_cm',
+                    'sd1.light_lux',
+                    'sd1.temperature_c',
+                    'sd1.soil_moisture_pct',
                     'sd1.status',
                     'sd1.recorded_at'
                 ])
