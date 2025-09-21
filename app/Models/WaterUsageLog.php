@@ -12,6 +12,7 @@ class WaterUsageLog extends Model
 
     protected $fillable = [
         'water_storage_id',
+        'device_id',
         'usage_date',
         'volume_used_l',
         'source',
@@ -27,5 +28,10 @@ class WaterUsageLog extends Model
     public function waterStorage(): BelongsTo
     {
         return $this->belongsTo(WaterStorage::class);
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
     }
 }

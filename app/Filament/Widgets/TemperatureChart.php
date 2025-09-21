@@ -51,28 +51,31 @@ class TemperatureChart extends ChartWidget
                 [
                     'label' => 'Average',
                     'data' => $avgData,
-                    'borderColor' => 'rgb(255, 99, 132)',
-                    'backgroundColor' => 'rgba(255, 99, 132, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
+                    'backgroundColor' => 'rgba(239,68,68,0.7)', // red focus
+                    'borderColor' => 'rgba(239,68,68,1)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 46,
+                    'barPercentage' => 0.85,
+                    'categoryPercentage' => 0.9,
+                    'borderRadius' => 6,
                 ],
                 [
                     'label' => 'Maximum',
                     'data' => $maxData,
-                    'borderColor' => 'rgb(255, 159, 64)',
-                    'backgroundColor' => 'rgba(255, 159, 64, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
-                    'borderDash' => [5, 5],
+                    'backgroundColor' => 'rgba(249,115,22,0.35)',
+                    'borderColor' => 'rgba(249,115,22,0.9)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
                 [
                     'label' => 'Minimum',
                     'data' => $minData,
-                    'borderColor' => 'rgb(75, 192, 192)',
-                    'backgroundColor' => 'rgba(75, 192, 192, 0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
-                    'borderDash' => [5, 5],
+                    'backgroundColor' => 'rgba(14,165,233,0.35)',
+                    'borderColor' => 'rgba(14,165,233,0.9)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
             ],
             'labels' => $labels,
@@ -81,7 +84,7 @@ class TemperatureChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 
     protected function getOptions(): array
@@ -93,26 +96,83 @@ class TemperatureChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
+                    'align' => 'center',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'pointStyle' => 'rect',
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'color' => '#9ca3af',
+                        'padding' => 20,
+                        'boxWidth' => 12,
+                        'boxHeight' => 12,
+                    ]
                 ],
-                'title' => [
-                    'display' => true,
-                    'text' => 'Temperature (°C) - Last 24 Hours',
-                ],
+                'tooltip' => [
+                    'backgroundColor' => 'rgba(0, 0, 0, 0.8)',
+                    'titleColor' => '#ffffff',
+                    'bodyColor' => '#ffffff',
+                    'borderColor' => 'rgba(255, 255, 255, 0.1)',
+                    'borderWidth' => 1,
+                    'cornerRadius' => 6,
+                    'padding' => 10,
+                    'displayColors' => true,
+                    'mode' => 'index',
+                    'intersect' => false,
+                ]
             ],
             'scales' => [
-                'y' => [
-                    'beginAtZero' => false,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Temperature (°C)',
-                    ],
-                ],
                 'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Hour',
+                    'grid' => [
+                        'display' => false,
                     ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                    ],
+                    'border' => [
+                        'display' => false,
+                    ]
                 ],
+                'y' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'left',
+                    'beginAtZero' => false,
+                    'grid' => [
+                        'color' => 'rgba(107, 114, 128, 0.1)',
+                        'lineWidth' => 1,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                    ],
+                    'border' => [
+                        'display' => false,
+                    ]
+                ]
+            ],
+            'elements' => [
+                'bar' => [
+                    'borderRadius' => 2,
+                    'borderSkipped' => false,
+                ]
+            ],
+            'layout' => [
+                'padding' => [
+                    'top' => 10,
+                    'bottom' => 10,
+                    'left' => 10,
+                    'right' => 10,
+                ]
             ],
             'interaction' => [
                 'intersect' => false,

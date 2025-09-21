@@ -20,8 +20,9 @@ class WaterStorageSeederSingle extends Seeder
             'tank_name' => 'Tangki Utama',
             'zone_name' => 'Zona Utama',
             'zone_description' => 'Tangki tunggal melayani 8 node sensor & irigasi',
-            'capacity_liters' => 1500,
-            'current_volume_liters' => 1200,
+            // Set total tank capacity to 1000L as requested, seed current volume at 80% (800L)
+            'capacity_liters' => 1000,
+            'current_volume_liters' => 800,
             'status' => 'normal',
             'device_id' => $deviceIds[0] ?? null,
             'total_lines' => 3,

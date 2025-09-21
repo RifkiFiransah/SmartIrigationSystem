@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\DataManagementController;
 use App\Http\Controllers\Api\WaterStorageController;
 use App\Http\Controllers\Api\DataTransferController;
 use App\Http\Controllers\Api\IrrigationController;
+use App\Http\Controllers\Api\DeviceUsageController;
+use App\Http\Controllers\BMKGForecastController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -92,6 +94,12 @@ Route::prefix('irrigation')->group(function () {
     Route::post('/session-report', [\App\Http\Controllers\Api\IrrigationPlanController::class, 'report']);
 });
 
+// ===== DEVICE USAGE (Per-device sessions & history) =====
+Route::prefix('devices/{device}')->group(function(){
+    Route::get('/irrigation/sessions', [DeviceUsageController::class, 'sessions']);
+    Route::get('/usage-history', [DeviceUsageController::class, 'usageHistory']);
+});
+
 // ===== USER ROUTE =====
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -108,3 +116,6 @@ Route::get('/user', function (Request $request) {
 Route::get('/health', function(){
     return response()->json(['ok'=>true,'time'=>now()->toDateTimeString()]);
 });
+
+// ===== BMKG FORECAST PROXY =====
+Route::get('/bmkg/forecast', [BMKGForecastController::class, 'index']);

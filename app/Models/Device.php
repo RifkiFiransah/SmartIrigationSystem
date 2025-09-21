@@ -31,4 +31,9 @@ class Device extends Model
     {
         return $this->hasMany(WaterStorage::class);
     }
+
+    public function waterUsageLogs() : HasMany
+    {
+        return $this->hasMany(WaterUsageLog::class);
+    }
 }

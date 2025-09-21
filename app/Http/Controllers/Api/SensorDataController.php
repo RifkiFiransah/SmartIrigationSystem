@@ -286,6 +286,7 @@ class SensorDataController extends Controller
                     'sd1.light_lux',
                     'sd1.temperature_c',
                     'sd1.soil_moisture_pct',
+                    'sd1.ina226_bus_voltage_v as battery_voltage_v',
                     'sd1.status',
                     'sd1.recorded_at'
                 ])

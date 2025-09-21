@@ -49,31 +49,33 @@ class SoilMoistureChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Average Soil Moisture',
+                    'label' => 'Average',
                     'data' => $avgData,
-                    'backgroundColor' => 'rgba(75, 192, 192, 0.2)',
-                    'borderColor' => 'rgba(75, 192, 192, 1)',
-                    'borderWidth' => 2,
-                    'fill' => true,
-                    'tension' => 0.4,
+                    'backgroundColor' => 'rgba(34,197,94,0.7)', // green primary
+                    'borderColor' => 'rgba(34,197,94,1)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 46,
+                    'barPercentage' => 0.85,
+                    'categoryPercentage' => 0.9,
+                    'borderRadius' => 6,
                 ],
                 [
-                    'label' => 'Min Soil Moisture',
+                    'label' => 'Minimum',
                     'data' => $minData,
-                    'backgroundColor' => 'rgba(255, 159, 64, 0.1)',
-                    'borderColor' => 'rgba(255, 159, 64, 0.5)',
+                    'backgroundColor' => 'rgba(249,115,22,0.35)', // orange soft
+                    'borderColor' => 'rgba(249,115,22,0.9)',
                     'borderWidth' => 1,
-                    'fill' => false,
-                    'borderDash' => [5, 5],
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
                 [
-                    'label' => 'Max Soil Moisture',
+                    'label' => 'Maximum',
                     'data' => $maxData,
-                    'backgroundColor' => 'rgba(153, 102, 255, 0.1)',
-                    'borderColor' => 'rgba(153, 102, 255, 0.5)',
+                    'backgroundColor' => 'rgba(99,102,241,0.35)', // indigo soft
+                    'borderColor' => 'rgba(99,102,241,0.9)',
                     'borderWidth' => 1,
-                    'fill' => false,
-                    'borderDash' => [5, 5],
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
             ],
             'labels' => $labels,
@@ -82,7 +84,7 @@ class SoilMoistureChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 
     protected function getOptions(): array
@@ -94,29 +96,84 @@ class SoilMoistureChart extends ChartWidget
                 'legend' => [
                     'display' => true,
                     'position' => 'top',
+                    'align' => 'center',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'pointStyle' => 'rect',
+                        'font' => [
+                            'size' => 12,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'color' => '#9ca3af',
+                        'padding' => 20,
+                        'boxWidth' => 12,
+                        'boxHeight' => 12,
+                    ]
                 ],
-                'title' => [
-                    'display' => true,
-                    'text' => 'Hourly Soil Moisture Levels'
+                'tooltip' => [
+                    'backgroundColor' => 'rgba(0, 0, 0, 0.8)',
+                    'titleColor' => '#ffffff',
+                    'bodyColor' => '#ffffff',
+                    'borderColor' => 'rgba(255, 255, 255, 0.1)',
+                    'borderWidth' => 1,
+                    'cornerRadius' => 6,
+                    'padding' => 10,
+                    'displayColors' => true,
+                    'mode' => 'index',
+                    'intersect' => false,
                 ]
             ],
             'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'max' => 100,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Soil Moisture (%)'
-                    ],
+                'x' => [
                     'grid' => [
-                        'color' => 'rgba(75, 192, 192, 0.1)',
+                        'display' => false,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                    ],
+                    'border' => [
+                        'display' => false,
                     ]
                 ],
-                'x' => [
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Time (Hour)'
+                'y' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'left',
+                    'beginAtZero' => true,
+                    'max' => 100,
+                    'grid' => [
+                        'color' => 'rgba(107, 114, 128, 0.1)',
+                        'lineWidth' => 1,
+                    ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [
+                            'size' => 11,
+                            'family' => 'Inter, system-ui, sans-serif',
+                        ],
+                        'stepSize' => 25,
+                    ],
+                    'border' => [
+                        'display' => false,
                     ]
+                ]
+            ],
+            'elements' => [
+                'bar' => [
+                    'borderRadius' => 2,
+                    'borderSkipped' => false,
+                ]
+            ],
+            'layout' => [
+                'padding' => [
+                    'top' => 10,
+                    'bottom' => 10,
+                    'left' => 10,
+                    'right' => 10,
                 ]
             ],
             'interaction' => [

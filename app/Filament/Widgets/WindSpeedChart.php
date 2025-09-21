@@ -49,28 +49,29 @@ class WindSpeedChart extends ChartWidget
                 [
                     'label' => 'Rata-rata',
                     'data' => $avgData,
-                    'borderColor' => 'rgb(99,102,241)',
-                    'backgroundColor' => 'rgba(99,102,241,0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
+                    'backgroundColor' => 'rgba(99,102,241,0.7)',
+                    'borderColor' => 'rgba(99,102,241,1)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 46,
+                    'borderRadius' => 6,
                 ],
                 [
                     'label' => 'Maksimum',
                     'data' => $maxData,
-                    'borderColor' => 'rgb(251,146,60)',
-                    'backgroundColor' => 'rgba(251,146,60,0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
-                    'borderDash' => [5,5],
+                    'backgroundColor' => 'rgba(251,146,60,0.35)',
+                    'borderColor' => 'rgba(251,146,60,0.9)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
                 [
                     'label' => 'Minimum',
                     'data' => $minData,
-                    'borderColor' => 'rgb(16,185,129)',
-                    'backgroundColor' => 'rgba(16,185,129,0.1)',
-                    'fill' => false,
-                    'tension' => 0.4,
-                    'borderDash' => [5,5],
+                    'backgroundColor' => 'rgba(16,185,129,0.35)',
+                    'borderColor' => 'rgba(16,185,129,0.9)',
+                    'borderWidth' => 1,
+                    'maxBarThickness' => 30,
+                    'borderRadius' => 4,
                 ],
             ],
             'labels' => $labels,
@@ -79,7 +80,7 @@ class WindSpeedChart extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 
     protected function getOptions(): array
@@ -88,16 +89,59 @@ class WindSpeedChart extends ChartWidget
             'responsive' => true,
             'maintainAspectRatio' => false,
             'plugins' => [
-                'legend' => [ 'display' => true, 'position' => 'top' ],
-                'title' => [ 'display' => true, 'text' => 'Kecepatan Angin (m/s) - 24 Jam Terakhir' ],
+                'legend' => [
+                    'display' => true,
+                    'position' => 'top',
+                    'align' => 'center',
+                    'labels' => [
+                        'usePointStyle' => true,
+                        'pointStyle' => 'rect',
+                        'font' => [ 'size' => 12, 'family' => 'Inter, system-ui, sans-serif' ],
+                        'color' => '#9ca3af',
+                        'padding' => 20,
+                        'boxWidth' => 12,
+                        'boxHeight' => 12,
+                    ]
+                ],
+                'tooltip' => [
+                    'backgroundColor' => 'rgba(0,0,0,0.8)',
+                    'titleColor' => '#ffffff',
+                    'bodyColor' => '#ffffff',
+                    'borderColor' => 'rgba(255,255,255,0.1)',
+                    'borderWidth' => 1,
+                    'cornerRadius' => 6,
+                    'padding' => 10,
+                    'displayColors' => true,
+                    'mode' => 'index',
+                    'intersect' => false,
+                ]
             ],
             'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [ 'display' => true, 'text' => 'm/s' ],
+                'x' => [
+                    'grid' => [ 'display' => false ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [ 'size' => 11, 'family' => 'Inter, system-ui, sans-serif' ],
+                    ],
+                    'border' => [ 'display' => false ],
                 ],
-                'x' => [ 'title' => [ 'display' => true, 'text' => 'Jam' ] ],
+                'y' => [
+                    'type' => 'linear',
+                    'display' => true,
+                    'position' => 'left',
+                    'beginAtZero' => true,
+                    'grid' => [ 'color' => 'rgba(107,114,128,0.1)', 'lineWidth' => 1 ],
+                    'ticks' => [
+                        'color' => '#6b7280',
+                        'font' => [ 'size' => 11, 'family' => 'Inter, system-ui, sans-serif' ],
+                    ],
+                    'border' => [ 'display' => false ],
+                ]
             ],
+            'elements' => [ 'bar' => [ 'borderRadius' => 2, 'borderSkipped' => false ] ],
+            'layout' => [ 'padding' => [ 'top' => 10, 'bottom' => 10, 'left' => 10, 'right' => 10 ] ],
+            'interaction' => [ 'intersect' => false, 'mode' => 'index' ],
+            'animation' => [ 'duration' => 500, 'easing' => 'easeInOutQuart' ]
         ];
     }
 }
