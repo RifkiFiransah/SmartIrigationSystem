@@ -1492,7 +1492,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             battery_voltage_v: x.battery_voltage_v,
                             light_lux: x.light_lux,
                             recorded_at: x.recorded_at,
-                            status: x.status || 'normal'
+                            status: x.status || 'normal',
+                            water_usage_today_l: x.water_usage_today_l ? parseFloat(x.water_usage_today_l) : null
                         }));
                         this.computeTopMetrics();
                     } catch (e) {
@@ -2308,16 +2309,9 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     return 'bg-green-600/70 text-white';
                 },
                 deviceUsageToday(deviceId) {
-                    // Placeholder: jika punya deviceSessions atau history bisa dihitung; untuk sementara '-'
-                    // Jika backend nanti menyediakan endpoint per-device daily usage, integrasikan di sini.
-                    if (!this.deviceSessions || !this.deviceSessions.length) return '-';
-                    const todayIso = new Date().toISOString().substring(0, 10);
-                    const sessions = this.deviceSessions.filter(s => (s.device_id == deviceId) && s.start_time && s
-                        .start_time.startsWith(todayIso));
-                    if (!sessions.length) return '-';
-                    const total = sessions.reduce((a, s) => a + (parseFloat(s.actual_liters || s.actual_l || s.volume_l) ||
-                        0), 0);
-                    return total ? total.toFixed(0) + 'L' : '-';
+                    const d = this.devices.find(d => d.device_id === deviceId || d.id === deviceId);
+                    if (!d || d.water_usage_today_l == null) return '-';
+                    return d.water_usage_today_l.toFixed(0) + 'L';
                 },
                 timeAgo(ts) {
                     if (!ts) return '-';

@@ -13,7 +13,8 @@ class DeviceUsageSeeder extends Seeder
 {
     public function run(): void
     {
-        $devices = Device::orderBy('id')->take(4)->get();
+    // Seed ALL active devices so modal setiap perangkat punya riwayat penggunaan
+    $devices = Device::where('is_active', true)->orderBy('id')->get();
         if($devices->isEmpty()) return;
 
         // Create daily plans for last 3 days including today if not exists
@@ -64,26 +65,32 @@ class DeviceUsageSeeder extends Seeder
             }
         }
 
-        // Create usage logs per device for last 14 days (sparse realistic data)
+        // Create usage logs per device for last 14 days. Untuk konsistensi dengan plan, pecah volume harian
+        // ke 1-3 sesi (random) dan simpan session_count di meta agar bisa dihitung di frontend jika perlu.
         foreach($devices as $device){
             for($d=0;$d<14;$d++){
                 $date = today()->subDays($d);
-                // skip some days for variability
-                if(rand(0,100) < 15) continue;
-                $volume = rand(20,80) + rand(0,99)/100; // 20-80 L
-                DB::table('water_usage_logs')->insert([
-                    'water_storage_id' => 1, // assume first storage
-                    'device_id' => $device->id,
-                    'usage_date' => $date->toDateString(),
-                    'volume_used_l' => $volume,
-                    'source' => 'irrigation',
-                    'meta' => json_encode([
-                        'generated' => true,
-                        'seed' => 'DeviceUsageSeeder'
-                    ]),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                if(rand(0,100) < 10) continue; // skip some days
+                $sessionCount = rand(1,3);
+                $dailyTotal = 0;
+                for($s=1;$s<=$sessionCount;$s++){
+                    $sessionVol = rand(8,35) + rand(0,99)/100; // 8 - 35 L
+                    $dailyTotal += $sessionVol;
+                    DB::table('water_usage_logs')->insert([
+                        'water_storage_id' => 1,
+                        'device_id' => $device->id,
+                        'usage_date' => $date->toDateString(),
+                        'volume_used_l' => $sessionVol,
+                        'source' => 'irrigation',
+                        'meta' => json_encode([
+                            'generated' => true,
+                            'seed' => 'DeviceUsageSeeder',
+                            'session_index' => $s,
+                        ]),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
     }

@@ -49,10 +49,11 @@ class DeviceUsageController extends Controller
         $sessions = $plan->sessions->map(function(IrrigationSession $s){
             $planned = (float)($s->adjusted_volume_l ?? $s->planned_volume_l ?? 0);
             $actual = (float)($s->actual_volume_l ?? 0);
-            $eff = $planned > 0 ? round(($actual / $planned) * 100, 1) : null;
+            $eff = $planned > 0 ? round(($actual / max($planned,0.0001)) * 100, 1) : null;
+            // Frontend welcome.blade expects keys: index, time, planned_l, actual_l
             return [
-                'session_index' => $s->session_index,
-                'scheduled_time' => $s->scheduled_time,
+                'index' => $s->session_index,
+                'time' => $s->scheduled_time,
                 'planned_l' => $planned,
                 'actual_l' => $actual,
                 'status' => $s->status,

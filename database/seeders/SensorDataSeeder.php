@@ -14,7 +14,7 @@ class SensorDataSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('Creating minimal sensor data (today only)...');
+    $this->command->info('Creating 24h hourly sensor data (past 24 hours)...');
         
         // Get active device IDs
         $deviceIds = DB::table('devices')->where('is_active', true)->pluck('id')->toArray();
@@ -32,56 +32,52 @@ class SensorDataSeeder extends Seeder
             $deviceIds = [DB::getPdo()->lastInsertId()];
         }
 
-        $sensorData = [];
+    $sensorData = [];
+    // Track cumulative irrigation usage per device (liters)
+    $irrigationTotals = [];
         
-        // Generate minimal data - just today with 3 readings only
-        $today = Carbon::now();
+    // Generate full 24 hours (hourly) including current hour going backwards
+    $now = Carbon::now();
         
         foreach ($deviceIds as $deviceId) {
-            // Generate only 3 readings for today (morning, noon, evening)
-            $hours = [8, 14, 20]; // 8 AM, 2 PM, 8 PM
-            
-            foreach ($hours as $hour) {
-                $timestamp = $today->copy()->hour($hour)->minute(rand(0, 59));
+            // Generate 24 readings (one per hour) from oldest to newest for smoother charts
+            for ($h = 23; $h >= 0; $h--) {
+                $timestamp = $now->copy()->subHours($h)->minute(0)->second(0)->addMinutes(rand(0,5));
+                $timestampHour = (int)$timestamp->format('G');
                 
                 // Simple realistic sensor values based on device ID for variety
-                $temperature_c = $this->getTemperatureByDevice($deviceId, $hour);
-                $soil_moisture_pct = $this->getSoilMoistureByDevice($deviceId, $hour);
+                $groundTemp = $this->getTemperatureByDevice($deviceId, $timestampHour);
+                $soil_moisture_pct = $this->getSoilMoistureByDevice($deviceId, $timestampHour);
                 $water_height_cm = $this->getWaterHeightByDevice($deviceId); 
-                $water_volume_l = ($water_height_cm / 100) * 200; // Based on height
-                $light_lux = $this->getLightByDevice($deviceId, $hour); // Realistic day/night cycle
-                $wind_speed_ms = rand(1, 6) + (rand(0, 99) / 100); // 1-6 m/s
-                
-                // INA226 power monitoring (realistic power consumption)
-                $ina226_bus_voltage_v = 5.0 + (rand(-5, 5) / 100); // 4.95-5.05V
-                $ina226_current_ma = 150 + rand(-30, 50); // 120-200mA
-                $ina226_power_mw = $ina226_bus_voltage_v * $ina226_current_ma;
+
+                // Cumulative irrigation usage (simulate increment only when moisture low)
+                if (!array_key_exists($deviceId, $irrigationTotals)) {
+                    $irrigationTotals[$deviceId] = rand(50, 150) / 10; // initial 5.0 - 15.0 L
+                }
+                $increment = ($soil_moisture_pct < 40) ? (rand(5, 25) / 100) : (rand(0, 5) / 100); // 0.00 - 0.25 L
+                $irrigationTotals[$deviceId] = round($irrigationTotals[$deviceId] + $increment, 3);
+
+                // Battery: 3.7V - 4.2V typical Li-Ion with slight drain pattern by hour
+                $battery_voltage_v = round(4.20 - (($timestampHour / 24) * rand(5,15) / 100), 2); // simplistic
                 
                 // Determine status
-                $status = $this->getSimpleStatus($temperature_c, $soil_moisture_pct);
+                $status = $this->getSimpleStatus($groundTemp, $soil_moisture_pct);
                 
                 $sensorData[] = [
                     'device_id' => $deviceId,
                     // Legacy fields (keep for compatibility)
-                    'temperature' => $temperature_c,
+                    'temperature' => $groundTemp, // legacy field kept
                     'humidity' => rand(45, 75), // Legacy field
                     'soil_moisture' => $soil_moisture_pct,
-                    'water_flow' => $water_volume_l / 10, // Legacy conversion
-                    'light_intensity' => $light_lux / 1000, // Legacy field
-                    
-                    // New sensor fields
-                    'temperature_c' => $temperature_c,
+                    'water_flow' => null, // Not used now
+                    'light_intensity' => null,
+
+                    // Device-centric new schema fields
+                    'ground_temperature_c' => $groundTemp,
                     'soil_moisture_pct' => $soil_moisture_pct,
                     'water_height_cm' => $water_height_cm,
-                    'water_volume_l' => round($water_volume_l, 2),
-                    'light_lux' => $light_lux,
-                    'wind_speed_ms' => round($wind_speed_ms, 2),
-                    
-                    // INA226 fields
-                    'ina226_bus_voltage_v' => round($ina226_bus_voltage_v, 3),
-                    'ina226_shunt_voltage_mv' => rand(-3, 3), // Small shunt voltage
-                    'ina226_current_ma' => round($ina226_current_ma, 3),
-                    'ina226_power_mw' => round($ina226_power_mw, 3),
+                    'irrigation_usage_total_l' => $irrigationTotals[$deviceId],
+                    'battery_voltage_v' => $battery_voltage_v,
                     
                     // Timing fields
                     'device_ts' => $timestamp,
@@ -101,7 +97,7 @@ class SensorDataSeeder extends Seeder
             DB::table('sensor_data')->insert($chunk);
         }
         
-        $this->command->info('Created ' . count($sensorData) . ' minimal sensor records for ' . count($deviceIds) . ' devices (today only)');
+    $this->command->info('Created ' . count($sensorData) . ' hourly sensor records for ' . count($deviceIds) . ' devices (last 24h)');
     }
 
     /**
@@ -131,6 +127,10 @@ class SensorDataSeeder extends Seeder
             6 => 43.00, // Node 6 - water level
             7 => 28.90, // Node 7 - normal sensor (not power reading)
             8 => 25 + rand(-2, 5), // Node 8 - normal
+            9 => 27.5 + rand(-1,2)/2,  // Reservoir monitor
+            10 => 30 + rand(-2,3)/2,   // Pompa area (sedikit lebih hangat)
+            11 => 26 + rand(-2,4)/2,   // Bed Percobaan A
+            12 => 26.5 + rand(-2,4)/2, // Bed Percobaan B
             default => 25 + rand(-3, 8),
         };
         return round($baseTemp + (rand(-1, 1) * 0.1), 2);
@@ -148,6 +148,12 @@ class SensorDataSeeder extends Seeder
             4 => rand(35, 40), // Medium (not special reading for moisture)
             5 => rand(2, 5), // Very low
             6 => rand(40, 45), // Medium
+            7 => rand(45, 55),
+            8 => rand(40, 60),
+            9 => rand(60, 70), // reservoir edge soil
+            10 => rand(30, 45), // near pump dryer
+            11 => rand(55, 65), // experimental bed wetter
+            12 => rand(50, 60), // experimental bed
             default => rand(35, 75),
         };
     }
@@ -166,6 +172,10 @@ class SensorDataSeeder extends Seeder
             6 => rand(40, 50), // Medium
             7 => rand(45, 55), // Medium-high
             8 => rand(30, 40), // Medium
+            9 => rand(55, 65), // Reservoir deeper
+            10 => rand(20, 30), // Pump intake trench
+            11 => rand(35, 45), // Experimental A
+            12 => rand(35, 45), // Experimental B
             default => rand(35, 60),
         };
     }
@@ -173,22 +183,7 @@ class SensorDataSeeder extends Seeder
     /**
      * Get light by device and hour
      */
-    private function getLightByDevice(int $deviceId, int $hour): int
-    {
-        $baseLux = $this->getLightByHour($hour);
-        
-        return match ($deviceId) {
-            1 => (int)($baseLux * 0.3), // Indoor/shaded
-            2 => (int)($baseLux * 0.1), // Very low light
-            3 => (int)($baseLux * 1.2), // High light
-            4 => (int)($baseLux * 0.4), // Medium light
-            5 => (int)($baseLux * 0.05), // Very low/night
-            6 => (int)($baseLux * 0.8), // Good light
-            7 => (int)($baseLux * 0.6), // Medium light
-            8 => (int)($baseLux * 1.0), // Normal
-            default => $baseLux,
-        };
-    }
+    // Removed getLightByDevice (global sensor moved / not per device)
 
     /**
      * Simple status determination

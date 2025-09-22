@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             WaterStorageSeederSingle::class,
             IrrigationValveSeeder::class,
             DeviceUsageSeeder::class,
+            IrrigationSessionSeeder::class,
         ]);
     }
 }

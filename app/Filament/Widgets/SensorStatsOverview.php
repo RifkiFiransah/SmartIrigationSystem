@@ -6,7 +6,8 @@ use App\Models\SensorData;
 use App\Models\Device;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Carbon\Carbon;
+use App\Services\BMKGWeatherService;
+use Illuminate\Support\Facades\App;
 
 class SensorStatsOverview extends StatsOverviewWidget
 {
@@ -25,64 +26,66 @@ class SensorStatsOverview extends StatsOverviewWidget
             ->latest('recorded_at')
             ->first();
 
-        // Statistik untuk perbandingan dengan 24 jam lalu
+        // Statistik untuk perbandingan dengan 24 jam lalu (hanya metric device inti)
         $avgLast24h = SensorData::where('recorded_at', '>=', now()->subHours(24))
             ->selectRaw('
-                AVG(temperature_c) as avg_temp,
+                AVG(ground_temperature_c) as avg_temp,
                 AVG(soil_moisture_pct) as avg_soil,
-                AVG(water_volume_l) as avg_volume,
-                AVG(light_lux) as avg_light,
-                AVG(wind_speed_ms) as avg_wind,
-                AVG(water_height_cm) as avg_height,
+                AVG(irrigation_usage_total_l) as avg_irrigation,
+                AVG(battery_voltage_v) as avg_battery,
                 AVG(ina226_power_mw) as avg_power
             ')
             ->first();
 
         // Hitung perubahan dari rata-rata 24 jam
-        $tempChange = $this->calculateChange($latestData?->temperature_c, $avgLast24h?->avg_temp);
+        $tempChange = $this->calculateChange($latestData?->ground_temperature_c, $avgLast24h?->avg_temp);
         $soilChange = $this->calculateChange($latestData?->soil_moisture_pct, $avgLast24h?->avg_soil);
-        $volumeChange = $this->calculateChange($latestData?->water_volume_l, $avgLast24h?->avg_volume);
-        $lightChange = $this->calculateChange($latestData?->light_lux, $avgLast24h?->avg_light);
-        $windChange = $this->calculateChange($latestData?->wind_speed_ms, $avgLast24h?->avg_wind);
-        $heightChange = $this->calculateChange($latestData?->water_height_cm, $avgLast24h?->avg_height);
+        $irrigationChange = $this->calculateChange($latestData?->irrigation_usage_total_l, $avgLast24h?->avg_irrigation);
+        $batteryChange = $this->calculateChange($latestData?->battery_voltage_v, $avgLast24h?->avg_battery);
         $powerChange = $this->calculateChange($latestData?->ina226_power_mw, $avgLast24h?->avg_power);
 
-        return [
-            Stat::make('Suhu', $this->formatValue($latestData?->temperature_c, '°C'))
-                ->description($this->getSensorDescription('Suhu', $tempChange, $latestData?->temperature_c, [15, 35]))
-                ->descriptionIcon($this->getIcon($latestData?->temperature_c, [15, 35], 'heroicon-m-fire', 'heroicon-m-sun', 'heroicon-m-cube-transparent'))
-                ->color($this->getColor($latestData?->temperature_c, [15, 35]))
-                ->chart($this->getMiniChart('temperature_c')),
+        // Ambil data lingkungan eksternal langsung dari service (tanpa HTTP loop)
+        $luxValue = null; $windValue = null; $cond = null; $source = null;
+        try {
+            /** @var BMKGWeatherService $wx */
+            $wx = App::make(BMKGWeatherService::class);
+            $hourly = $wx->getHourly(-6.2, 106.8166, 24);
+            $hours = $hourly['hours'] ?? [];
+            if (!empty($hours)) {
+                $last = end($hours);
+                $luxValue = $last['light_lux'] ?? null;
+                $windValue = $last['wind_speed'] ?? null;
+                $cond = $last['condition'] ?? null;
+                $source = $hourly['source'] ?? null;
+            }
+        } catch (\Throwable $e) {
+            // silent fail -> N/A
+        }
+
+        $stats = [
+            Stat::make('Suhu Tanah', $this->formatValue($latestData?->ground_temperature_c, '°C'))
+                ->description($this->getSensorDescription('Suhu', $tempChange, $latestData?->ground_temperature_c, [15, 35]))
+                ->descriptionIcon($this->getIcon($latestData?->ground_temperature_c, [15, 35], 'heroicon-m-fire', 'heroicon-m-sun', 'heroicon-m-cube-transparent'))
+                ->color($this->getColor($latestData?->ground_temperature_c, [15, 35]))
+                ->chart($this->getMiniChart('ground_temperature_c')),
 
             Stat::make('Kelembapan Tanah', $this->formatValue($latestData?->soil_moisture_pct, '%'))
                 ->description($this->getSensorDescription('Tanah', $soilChange, $latestData?->soil_moisture_pct, [30, 70]))
                 ->descriptionIcon($this->getIcon($latestData?->soil_moisture_pct, [30, 70], 'heroicon-m-beaker', 'heroicon-m-globe-alt', 'heroicon-m-exclamation-triangle'))
                 ->color($this->getColor($latestData?->soil_moisture_pct, [30, 70]))
                 ->chart($this->getMiniChart('soil_moisture_pct')),
+            
+            Stat::make('Irigasi Total', $this->formatValue($latestData?->irrigation_usage_total_l, ' L'))
+                ->description($this->getSensorDescription('Irigasi', $irrigationChange, $latestData?->irrigation_usage_total_l, [0, max(1, ($latestData?->irrigation_usage_total_l ?? 0) * 1.2)]))
+                ->descriptionIcon('heroicon-m-arrow-path')
+                ->color('info')
+                ->chart($this->getMiniChart('irrigation_usage_total_l')),
 
-            Stat::make('Volume Air', $this->formatValue($latestData?->water_volume_l, ' L'))
-                ->description($this->getSensorDescription('Volume', $volumeChange, $latestData?->water_volume_l, [50, 200]))
-                ->descriptionIcon($this->getIcon($latestData?->water_volume_l, [50, 200], 'heroicon-m-arrow-up', 'heroicon-m-arrow-right', 'heroicon-m-arrow-down'))
-                ->color($this->getColor($latestData?->water_volume_l, [50, 200]))
-                ->chart($this->getMiniChart('water_volume_l')),
-
-            Stat::make('Cahaya', $this->formatValue($latestData?->light_lux, ' Lux'))
-                ->description($this->getSensorDescription('Cahaya', $lightChange, $latestData?->light_lux, [1000, 50000]))
-                ->descriptionIcon($this->getIcon($latestData?->light_lux, [1000, 50000], 'heroicon-m-sun', 'heroicon-m-light-bulb', 'heroicon-m-moon'))
-                ->color($this->getColor($latestData?->light_lux, [1000, 50000]))
-                ->chart($this->getMiniChart('light_lux')),
-
-            Stat::make('Angin', $this->formatValue($latestData?->wind_speed_ms, ' m/s'))
-                ->description($this->getSensorDescription('Angin', $windChange, $latestData?->wind_speed_ms, [2, 10]))
-                ->descriptionIcon($this->getIcon($latestData?->wind_speed_ms, [2, 10], 'heroicon-m-arrow-trending-up', 'heroicon-m-minus', 'heroicon-m-pause'))
-                ->color($this->getColor($latestData?->wind_speed_ms, [2, 10]))
-                ->chart($this->getMiniChart('wind_speed_ms')),
-
-            Stat::make('Tinggi Air', $this->formatValue($latestData?->water_height_cm, ' cm'))
-                ->description($this->getSensorDescription('Tinggi', $heightChange, $latestData?->water_height_cm, [20, 80]))
-                ->descriptionIcon($this->getIcon($latestData?->water_height_cm, [20, 80], 'heroicon-m-arrow-up', 'heroicon-m-minus', 'heroicon-m-arrow-down'))
-                ->color($this->getColor($latestData?->water_height_cm, [20, 80]))
-                ->chart($this->getMiniChart('water_height_cm')),
+            Stat::make('Baterai', $this->formatValue($latestData?->battery_voltage_v, ' V'))
+                ->description($this->getSensorDescription('Baterai', $batteryChange, $latestData?->battery_voltage_v, [3.5, 4.2]))
+                ->descriptionIcon($this->getIcon($latestData?->battery_voltage_v, [4.0, 4.2], 'heroicon-m-bolt', 'heroicon-m-battery-50', 'heroicon-m-battery-0'))
+                ->color($this->getColor($latestData?->battery_voltage_v, [3.5, 4.2]))
+                ->chart($this->getMiniChart('battery_voltage_v')),
 
             Stat::make('Daya INA226', $this->formatValue($latestData?->ina226_power_mw, ' mW'))
                 ->description($this->getSensorDescription('Daya', $powerChange, $latestData?->ina226_power_mw, [100, 1000]))
@@ -95,6 +98,18 @@ class SensorStatsOverview extends StatsOverviewWidget
                 ->descriptionIcon($this->getSystemIcon())
                 ->color($this->getSystemColor()),
         ];
+
+        // Tambah statistik eksternal (Lux & Angin) kalau tersedia
+        $stats[] = Stat::make('Cahaya (Lux)', $luxValue !== null ? number_format($luxValue) : 'N/A')
+            ->description($cond ? ucfirst($cond).($source?" · $source":'') : 'Data eksternal')
+            ->descriptionIcon('heroicon-m-sparkles')
+            ->color($luxValue === null ? 'gray' : 'success');
+        $stats[] = Stat::make('Angin', $windValue !== null ? number_format($windValue,1).' m/s' : 'N/A')
+            ->description($windValue!==null ? '24h eksternal' : 'Tidak ada data')
+            ->descriptionIcon('heroicon-m-arrow-path-rounded-square')
+            ->color($windValue === null ? 'gray' : ($windValue>8 ? 'danger' : ($windValue>5 ? 'warning':'success')));
+
+        return $stats;
     }
 
     private function calculateChange($current, $average): float

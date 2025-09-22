@@ -7,6 +7,12 @@ use App\Filament\Resources\DeviceResource\RelationManagers;
 use App\Models\Device;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -48,6 +54,36 @@ class DeviceResource extends Resource
                     ->default(true)
                     ->inline()
                     ->required(),
+                Section::make('Data Sensor Awal (Opsional)')
+                    ->description('Isi jika ingin langsung membuat catatan sensor awal untuk perangkat baru.')
+                    ->schema([
+                        Toggle::make('init_sensor_enable')
+                            ->label('Isi Data Awal?')
+                            ->reactive(),
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('init_ground_temperature_c')
+                                    ->numeric()
+                                    ->label('Suhu Tanah (°C)')
+                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
+                                TextInput::make('init_soil_moisture_pct')
+                                    ->numeric()
+                                    ->label('Kelembapan Tanah (%)')
+                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
+                                TextInput::make('init_irrigation_usage_total_l')
+                                    ->numeric()
+                                    ->label('Total Irigasi (L)')
+                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
+                                TextInput::make('init_battery_voltage_v')
+                                    ->numeric()
+                                    ->label('Tegangan Baterai (V)')
+                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
+                                TextInput::make('init_ina226_power_mw')
+                                    ->numeric()
+                                    ->label('Daya (mW)')
+                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
+                            ]),
+                    ])->collapsed(),
             ])->columns(2);
             // ->columnSpan([1, 2]);
     }

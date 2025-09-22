@@ -13,16 +13,20 @@ class DeviceSeeder extends Seeder
      */
     public function run(): void
     {
-        $target = 8; // exactly 8 nodes
+    $target = 12; // expanded to 12 nodes
         $baseline = [
-            'Greenhouse A - Zona 1',
-            'Greenhouse A - Zona 2',
-            'Greenhouse B - Zona 1',
-            'Greenhouse B - Zona 2',
-            'Area Outdoor - Utara',
-            'Area Outdoor - Selatan',
-            'Nursery - Bibit',
-            'Research Plot',
+            'Greenhouse A - Zona 1',      //1
+            'Greenhouse A - Zona 2',      //2
+            'Greenhouse B - Zona 1',      //3
+            'Greenhouse B - Zona 2',      //4
+            'Area Outdoor - Utara',       //5
+            'Area Outdoor - Selatan',     //6
+            'Nursery - Bibit',            //7
+            'Research Plot',              //8
+            'Reservoir Utama',            //9
+            'Pompa Intake',               //10
+            'Bed Percobaan A',            //11
+            'Bed Percobaan B',            //12
         ];
 
         $existing = DB::table('devices')->pluck('device_id','device_id')->toArray();

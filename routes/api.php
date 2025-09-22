@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\WaterStorageController;
 use App\Http\Controllers\Api\DataTransferController;
 use App\Http\Controllers\Api\IrrigationController;
 use App\Http\Controllers\Api\DeviceUsageController;
+use App\Http\Controllers\Api\WeatherController;
 use App\Http\Controllers\BMKGForecastController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -119,3 +120,7 @@ Route::get('/health', function(){
 
 // ===== BMKG FORECAST PROXY =====
 Route::get('/bmkg/forecast', [BMKGForecastController::class, 'index']);
+
+// ===== EXTERNAL WEATHER (BMKG/Open-Meteo proxy) =====
+Route::get('/weather/external', [WeatherController::class, 'external']);
+Route::get('/weather/hourly', [WeatherController::class, 'hourly']);

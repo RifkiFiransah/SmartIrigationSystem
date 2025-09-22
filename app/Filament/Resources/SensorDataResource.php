@@ -64,8 +64,8 @@ class SensorDataResource extends Resource
                     
                 Forms\Components\Grid::make(2)
                     ->schema([
-                        TextInput::make('temperature_c')
-                            ->label('Suhu (°C)')
+                        TextInput::make('ground_temperature_c')
+                            ->label('Suhu Tanah (°C)')
                             ->numeric()
                             ->step(0.1)
                             ->minValue(-50)
@@ -94,66 +94,37 @@ class SensorDataResource extends Resource
                             ->suffix('cm')
                             ->placeholder('50'),
 
-                        TextInput::make('water_volume_l')
-                            ->label('Volume Air (L)')
+                        TextInput::make('irrigation_usage_total_l')
+                            ->label('Total Penggunaan Air (L)')
                             ->numeric()
-                            ->step(0.01)
+                            ->step(0.001)
                             ->minValue(0)
                             ->suffix('L')
-                            ->placeholder('120.50'),
+                            ->placeholder('15.250'),
                     ])
                     ->columns(2),
                     
                 Forms\Components\Grid::make(2)
                     ->schema([
-                        TextInput::make('light_lux')
-                            ->label('Cahaya (lux)')
-                            ->numeric()
-                            ->step(1)
-                            ->minValue(0)
-                            ->suffix('lux')
-                            ->placeholder('25000'),
-
-                        TextInput::make('wind_speed_ms')
-                            ->label('Kecepatan Angin (m/s)')
+                        TextInput::make('battery_voltage_v')
+                            ->label('Tegangan Baterai (V)')
                             ->numeric()
                             ->step(0.01)
                             ->minValue(0)
-                            ->suffix('m/s')
-                            ->placeholder('3.5'),
+                            ->suffix('V')
+                            ->placeholder('4.10'),
                     ])
                     ->columns(2),
 
-                Forms\Components\Fieldset::make('INA226 (Daya)')
+                Forms\Components\Fieldset::make('Daya (INA226)')
                     ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                TextInput::make('ina226_bus_voltage_v')
-                                    ->label('Tegangan Bus (V)')
-                                    ->numeric()
-                                    ->step(0.001)
-                                    ->minValue(0)
-                                    ->suffix('V'),
-                                TextInput::make('ina226_shunt_voltage_mv')
-                                    ->label('Tegangan Shunt (mV)')
-                                    ->numeric()
-                                    ->step(1)
-                                    ->suffix('mV'),
-                            ]),
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                TextInput::make('ina226_current_ma')
-                                    ->label('Arus (mA)')
-                                    ->numeric()
-                                    ->step(0.001)
-                                    ->suffix('mA'),
-                                TextInput::make('ina226_power_mw')
-                                    ->label('Daya (mW)')
-                                    ->numeric()
-                                    ->step(0.001)
-                                    ->suffix('mW'),
-                            ]),
-                    ]),
+                        TextInput::make('ina226_power_mw')
+                            ->label('Daya (mW)')
+                            ->numeric()
+                            ->step(0.001)
+                            ->suffix('mW')
+                            ->helperText('Hanya total daya disimpan (tegangan & arus dihapus).'),
+                    ])->collapsed(),
 
                 Forms\Components\Fieldset::make('Field Lama (opsional)')
                     ->schema([
@@ -204,8 +175,8 @@ class SensorDataResource extends Resource
                     ->description(fn (SensorData $record): string => $record->recorded_at?->diffForHumans() ?? '—')
                     ->toggleable(true, true),
                     
-                TextColumn::make('temperature_c')
-                    ->label('Suhu (°C)')
+                TextColumn::make('ground_temperature_c')
+                    ->label('Suhu Tanah')
                     ->suffix('°C')
                     ->sortable()
                     ->numeric(decimalPlaces: 1)
@@ -236,49 +207,23 @@ class SensorDataResource extends Resource
                     ->numeric()
                     ->toggleable(),
 
-                TextColumn::make('water_volume_l')
-                    ->label('Volume Air')
+                TextColumn::make('irrigation_usage_total_l')
+                    ->label('Total Air')
                     ->suffix(' L')
                     ->sortable()
-                    ->numeric(decimalPlaces: 2)
+                    ->numeric(decimalPlaces: 3)
                     ->toggleable(),
                     
-                TextColumn::make('light_lux')
-                    ->label('Cahaya')
-                    ->suffix(' lux')
-                    ->sortable()
-                    ->numeric()
-                    ->formatStateUsing(fn ($state) => number_format($state))
-                    ->color(fn ($state) => match (true) {
-                        $state < 200 => 'info',
-                        default => 'success'
-                    })
-                    ->toggleable(),
-
-                TextColumn::make('wind_speed_ms')
-                    ->label('Kecepatan Angin')
-                    ->suffix(' m/s')
+                TextColumn::make('battery_voltage_v')
+                    ->label('Baterai')
+                    ->suffix(' V')
                     ->sortable()
                     ->numeric(decimalPlaces: 2)
                     ->color(fn ($state) => match (true) {
-                        $state > 15 => 'danger',
-                        $state > 8 => 'warning',
+                        $state < 3.6 => 'danger',
+                        $state < 3.8 => 'warning',
                         default => 'success'
                     })
-                    ->toggleable(),
-
-                TextColumn::make('ina226_current_ma')
-                    ->label('Arus')
-                    ->suffix(' mA')
-                    ->sortable()
-                    ->numeric(decimalPlaces: 3)
-                    ->toggleable(),
-
-                TextColumn::make('ina226_bus_voltage_v')
-                    ->label('Tegangan Bus')
-                    ->suffix(' V')
-                    ->sortable()
-                    ->numeric(decimalPlaces: 3)
                     ->toggleable(),
 
                 TextColumn::make('ina226_power_mw')
@@ -407,11 +352,11 @@ class SensorDataResource extends Resource
                         return $query
                             ->when(
                                 $data['temp_min'] !== null,
-                                fn (Builder $query): Builder => $query->where('temperature_c', '>=', $data['temp_min']),
+                                fn (Builder $query): Builder => $query->where('ground_temperature_c', '>=', $data['temp_min']),
                             )
                             ->when(
                                 $data['temp_max'] !== null,
-                                fn (Builder $query): Builder => $query->where('temperature_c', '<=', $data['temp_max']),
+                                fn (Builder $query): Builder => $query->where('ground_temperature_c', '<=', $data['temp_max']),
                             );
                     }),
             ])
