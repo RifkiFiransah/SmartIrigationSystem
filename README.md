@@ -13,6 +13,9 @@ Sistem manajemen irigasi cerdas berbasis Laravel untuk monitoring dan kontrol ot
 - **API REST** - Endpoint lengkap untuk integrasi IoT dan mobile
 - **12 Node Sensor** - Monitoring detail per perangkat IoT
 - **Power Monitoring** - Konsumsi daya (mW) untuk node dengan INA226
+- **📊 Laporan Sistem** - Dashboard laporan harian dengan charts interaktif
+- **📧 Email Scheduler** - Laporan otomatis via email setiap hari
+- **📁 Multi-format Export** - CSV, Excel, dan PDF (opsional)
 
 ## 🏗️ Struktur Proyek
 
@@ -120,11 +123,39 @@ Fitur dashboard:
 - **WaterStorageController** - API tangki air
 - **IrrigationPlanController** - API rencana irigasi
 
+## 📊 Laporan Sistem
+
+### Cara Menggunakan Laporan
+1. Akses `/admin/system-report` di dashboard Filament
+2. Pilih rentang tanggal dan device (opsional)
+3. Klik "Generate" untuk membuat laporan
+4. Gunakan tombol export untuk unduh dalam berbagai format
+
+### Format Export Tersedia
+- **CSV**: Format universal untuk spreadsheet
+- **Excel**: Format Microsoft Excel dengan formatting
+- **PDF**: Format dokumen (memerlukan konfigurasi tambahan)
+
+### Email Otomatis
+```bash
+# Setup email recipients di .env
+MAIL_REPORT_RECIPIENTS="admin@example.com,manager@example.com"
+
+# Test email manual
+php artisan system:report-email admin@example.com
+
+# Email otomatis dijadwalkan setiap hari jam 07:00
+# Konfigurasi di config/report.php
+```
+
 ## 📊 Status Pengembangan
 
 ### ✅ Selesai
 - [x] Dashboard monitoring real-time
 - [x] API sensor data lengkap
+- [x] Sistem laporan dengan charts interaktif
+- [x] Export multi-format (CSV, Excel)
+- [x] Email scheduler untuk laporan harian
 - [x] Manajemen tangki air
 - [x] Rencana irigasi otomatis
 - [x] Database & seeder data

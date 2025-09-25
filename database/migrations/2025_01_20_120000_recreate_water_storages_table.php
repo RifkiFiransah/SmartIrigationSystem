@@ -19,8 +19,11 @@ return new class extends Migration
             $table->string('tank_name');
             $table->string('zone_name')->nullable();
             $table->text('zone_description')->nullable();
-            // Keep decimals to match seeders and model casts
             $table->decimal('capacity_liters', 10, 2);
+            $table->decimal('height_cm', 8, 2)->nullable();
+            $table->decimal('calibration_offset_cm', 8, 2)->default(0);
+            $table->decimal('last_height_cm', 8, 2)->nullable();
+            $table->timestamp('last_height_recorded_at')->nullable();
             $table->decimal('current_volume_liters', 10, 2)->default(0);
             $table->decimal('percentage', 5, 2)->nullable();
             $table->string('status', 20)->default('normal'); // normal|low|full|maintenance
@@ -36,8 +39,10 @@ return new class extends Migration
             $table->decimal('max_daily_usage', 10, 2)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();
-            // Avoid FK here to prevent ordering issues; keep index only
-            // Add FK in a later migration if desired
+            
+            // Indexes for performance
+            $table->index(['status', 'percentage']);
+            $table->index('last_height_recorded_at');
         });
     }
 

@@ -17,9 +17,17 @@ return new class extends Migration
             $table->string('device_name')->unique();
             $table->string('location')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->enum('valve_state', ['open', 'closed'])->default('closed');
+            $table->timestamp('valve_state_changed_at')->nullable();
+            $table->enum('connection_state', ['online', 'offline'])->default('offline');
+            $table->enum('connection_state_source', ['auto', 'manual'])->default('auto');
             $table->timestamp('last_seen_at')->nullable();
             $table->text('description')->nullable();
             $table->timestamps();
+            
+            // Add indexes for better performance
+            $table->index(['is_active', 'connection_state']);
+            $table->index('last_seen_at');
         });
     }
 

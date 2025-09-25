@@ -12,10 +12,15 @@ return new class extends Migration {
             $table->string('node_uid')->index();
             $table->time('start_time');
             $table->integer('duration_minutes');
+            $table->decimal('water_usage_target_liters', 8, 2)->nullable()->comment('Target penggunaan air dalam liter untuk jadwal ini');
             $table->json('days_of_week')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_run_at')->nullable();
             $table->timestamps();
+            
+            // Add performance indexes
+            $table->index(['is_active', 'start_time']);
+            $table->index('last_run_at');
         });
     }
 

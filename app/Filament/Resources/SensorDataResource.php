@@ -6,6 +6,7 @@ use App\Filament\Resources\SensorDataResource\Pages;
 use App\Filament\Resources\SensorDataResource\RelationManagers;
 use App\Models\Device;
 use App\Models\SensorData;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -15,11 +16,10 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 class SensorDataResource extends Resource
 {
@@ -124,7 +124,7 @@ class SensorDataResource extends Resource
                             ->step(0.001)
                             ->suffix('mW')
                             ->helperText('Hanya total daya disimpan (tegangan & arus dihapus).'),
-                    ])->collapsed(),
+                    ]),
 
                 Forms\Components\Fieldset::make('Field Lama (opsional)')
                     ->schema([
@@ -155,10 +155,20 @@ class SensorDataResource extends Resource
                 TextColumn::make('device.device_name')
                     ->label('Nama Perangkat')
                     ->searchable()
-                    ->sortable()
-                    ->weight('medium')
-                    ->icon('heroicon-m-cpu-chip'),
-                    
+                    ->sortable(),
+
+                TextColumn::make('device.connection_state') // baru
+                    ->label('Koneksi')
+                    ->badge()
+                    ->colors([
+                        'success' => 'online',
+                        'danger' => 'offline',
+                    ])
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                    ->description(fn ($record) => $record->device?->connection_state_source === 'manual' ? 'Manual' : 'Auto')
+                    ->tooltip(fn ($record) => $record->device?->last_seen_at ? 'Last: '.$record->device->last_seen_at->diffForHumans() : 'Belum pernah online')
+                    ->toggleable(),
+
                 TextColumn::make('device_ts')
                     ->label('Waktu Perangkat')
                     ->dateTime('d/m/Y H:i')
@@ -280,12 +290,19 @@ class SensorDataResource extends Resource
                     ->label('Device')
                     ->options(function () {
                         return Device::where('is_active', true)
-                            ->get()
                             ->pluck('device_name', 'id');
                     })
                     ->searchable()
                     ->preload(),
-                    
+                SelectFilter::make('connection_state') // baru
+                    ->label('Koneksi')
+                    ->options([
+                        'online' => 'Online',
+                        'offline' => 'Offline',
+                    ])
+                    ->query(fn (Builder $query, array $data) => $query->when($data['value'] ?? null, function ($q, $val) {
+                        $q->whereHas('device', fn ($dq) => $dq->where('connection_state', $val));
+                    })),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options([
@@ -323,10 +340,10 @@ class SensorDataResource extends Resource
                     ->indicateUsing(function (array $data): array {
                         $indicators = [];
                         if ($data['recorded_from'] ?? null) {
-                            $indicators['recorded_from'] = 'From: ' . Carbon::parse($data['recorded_from'])->toFormattedDateString();
+                            $indicators['recorded_from'] = 'From: ' . Carbon::parse($data['recorded_from'])->format('M j, Y');
                         }
                         if ($data['recorded_until'] ?? null) {
-                            $indicators['recorded_until'] = 'Until: ' . Carbon::parse($data['recorded_until'])->toFormattedDateString();
+                            $indicators['recorded_until'] = 'Until: ' . Carbon::parse($data['recorded_until'])->format('M j, Y');
                         }
                         return $indicators;
                     }),

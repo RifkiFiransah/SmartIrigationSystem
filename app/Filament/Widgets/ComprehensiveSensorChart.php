@@ -5,7 +5,9 @@ namespace App\Filament\Widgets;
 use App\Models\SensorData;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Filament\Support\RawJs;
+
 
 class ComprehensiveSensorChart extends ChartWidget
 {
@@ -21,18 +23,34 @@ class ComprehensiveSensorChart extends ChartWidget
 
     protected function getData(): array
     {
-        $data = SensorData::select(
-            DB::raw('HOUR(recorded_at) as hour'),
-            DB::raw('AVG(ground_temperature_c) as avg_temp'),
-            DB::raw('AVG(soil_moisture_pct) as avg_soil'),
-            DB::raw('AVG(irrigation_usage_total_l) as avg_irrigation'),
-            DB::raw('AVG(battery_voltage_v) as avg_battery'),
-            DB::raw('AVG(ina226_power_mw) as avg_power')
-        )
-        ->where('recorded_at', '>=', now()->subHours(24))
-        ->groupBy(DB::raw('HOUR(recorded_at)'))
-        ->orderBy('hour')
-        ->get();
+        try {
+            // Check if required columns exist to avoid SQL errors
+            $columns = Schema::getColumnListing('sensor_data');
+            $hasIna226 = in_array('ina226_power_mw', $columns);
+            
+            $selectFields = [
+                DB::raw('HOUR(recorded_at) as hour'),
+                DB::raw('AVG(ground_temperature_c) as avg_temp'),
+                DB::raw('AVG(soil_moisture_pct) as avg_soil'),
+                DB::raw('AVG(irrigation_usage_total_l) as avg_irrigation'),
+                DB::raw('AVG(battery_voltage_v) as avg_battery'),
+            ];
+            
+            if ($hasIna226) {
+                $selectFields[] = DB::raw('AVG(ina226_power_mw) as avg_power');
+            } else {
+                $selectFields[] = DB::raw('NULL as avg_power');
+            }
+            
+            $data = SensorData::select($selectFields)
+                ->where('recorded_at', '>=', DB::raw('DATE_SUB(NOW(), INTERVAL 24 HOUR)'))
+                ->groupBy(DB::raw('HOUR(recorded_at)'))
+                ->orderBy('hour')
+                ->get();
+        } catch (\Exception $e) {
+            // Return empty dataset if query fails
+            $data = collect();
+        }
 
         $labels = [];
         $tempData = $soilData = $irrigationData = $batteryData = $powerData = [];

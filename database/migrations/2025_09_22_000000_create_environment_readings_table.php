@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -26,7 +27,7 @@ return new class extends Migration
         // Optional: move data from sensor_data into environment_readings (only if existing)
         if (Schema::hasTable('sensor_data') && Schema::hasColumn('sensor_data', 'light_lux')) {
             // We only migrate distinct timestamps (coarse). Use raw query for portability.
-            \DB::statement("INSERT INTO environment_readings (recorded_at, light_lux, wind_speed_ms, created_at, updated_at, source)
+            DB::statement("INSERT INTO environment_readings (recorded_at, light_lux, wind_speed_ms, created_at, updated_at, source)
                 SELECT DISTINCT recorded_at, light_lux, wind_speed_ms, NOW(), NOW(), 'local_sensor'
                 FROM sensor_data
                 WHERE (light_lux IS NOT NULL OR wind_speed_ms IS NOT NULL)");

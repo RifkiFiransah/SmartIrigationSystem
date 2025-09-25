@@ -115,4 +115,18 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | System Report Email Recipients
+    |--------------------------------------------------------------------------
+    |
+    | Define default email recipients for daily system reports.
+    | This can be overridden by command arguments.
+    |
+    */
+    'report_recipients' => env('MAIL_REPORT_RECIPIENTS') ? explode(',', env('MAIL_REPORT_RECIPIENTS')) : [
+        // 'admin@example.com',
+        // 'manager@example.com',
+    ],
+
 ];

@@ -19,6 +19,7 @@ class IrrigationValveScheduleResource extends Resource
     protected static ?string $navigationLabel = 'Jadwal Katup';
     protected static ?string $modelLabel = 'Jadwal Katup';
     protected static ?string $pluralModelLabel = 'Jadwal Katup';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -34,8 +35,36 @@ class IrrigationValveScheduleResource extends Resource
 
         return $form->schema([
             Forms\Components\Select::make('node_uid')
-                ->label('Node UID')
-                ->options(fn () => IrrigationValve::query()->pluck('node_uid', 'node_uid')->toArray())
+                ->label('Nama Node')
+                ->options(function () {
+                    $options = [];
+                    
+                    // Get all devices that have irrigation valves
+                    $devices = \App\Models\Device::with('irrigationValves')
+                        ->whereHas('irrigationValves')
+                        ->orderBy('device_name')
+                        ->get();
+                    
+                    foreach ($devices as $device) {
+                        $deviceDisplay = "{$device->device_name} - {$device->location}";
+                        
+                        // If device has multiple valves, show them separately
+                        if ($device->irrigationValves->count() > 1) {
+                            foreach ($device->irrigationValves as $valve) {
+                                $valveName = $valve->description ?? 'Valve ' . $valve->id;
+                                $display = "{$deviceDisplay} - {$valveName}";
+                                $options[$valve->node_uid] = $display;
+                            }
+                        } else {
+                            // Single valve, show device name with valve description
+                            $valve = $device->irrigationValves->first();
+                            $valveName = $valve->description ?? 'Main Valve';
+                            $options[$valve->node_uid] = "{$deviceDisplay} - {$valveName}";
+                        }
+                    }
+                    
+                    return $options;
+                })
                 ->searchable()
                 ->required(),
             Forms\Components\TimePicker::make('start_time')
@@ -47,6 +76,13 @@ class IrrigationValveScheduleResource extends Resource
                 ->numeric()
                 ->minValue(1)
                 ->required(),
+            Forms\Components\TextInput::make('water_usage_target_liters')
+                ->label('Target Penggunaan Air (Liter)')
+                ->numeric()
+                ->minValue(0)
+                ->step(0.1)
+                ->suffix('L')
+                ->helperText('Jumlah air yang akan digunakan selama jadwal irigasi ini berjalan'),
             Forms\Components\CheckboxList::make('days_of_week')
                 ->label('Days of week')
                 ->options($dayOptions)
@@ -67,9 +103,35 @@ class IrrigationValveScheduleResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('node_uid')->label('Node')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('node_uid')
+                    ->label('Nama Node')
+                    ->formatStateUsing(function ($state) {
+                        $valve = IrrigationValve::where('node_uid', $state)->with('device')->first();
+                        if ($valve && $valve->device) {
+                            $device = $valve->device;
+                            $deviceDisplay = "{$device->device_name} - {$device->location}";
+                            
+                            // Check if device has multiple valves
+                            $deviceValves = $device->irrigationValves;
+                            if ($deviceValves->count() > 1) {
+                                $valveIndex = $deviceValves->search(function($v) use ($state) {
+                                    return $v->node_uid === $state;
+                                }) + 1;
+                                return "{$deviceDisplay} - Katup #{$valveIndex}";
+                            } else {
+                                return $deviceDisplay;
+                            }
+                        }
+                        return $state;
+                    })
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('start_time')->label('Start')->sortable(),
                 Tables\Columns\TextColumn::make('duration_minutes')->label('Minutes')->sortable(),
+                Tables\Columns\TextColumn::make('water_usage_target_liters')
+                    ->label('Target Air')
+                    ->formatStateUsing(fn ($state) => $state ? $state . ' L' : '-')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('days_of_week')
                     ->label('Days')
                     ->formatStateUsing(function ($state) use ($dayMap) {

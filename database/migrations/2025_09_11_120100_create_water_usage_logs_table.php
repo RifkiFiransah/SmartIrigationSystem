@@ -10,6 +10,7 @@ return new class extends Migration {
         Schema::create('water_usage_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('water_storage_id')->constrained('water_storages')->cascadeOnDelete();
+            $table->foreignId('device_id')->nullable()->constrained('devices')->nullOnDelete();
             $table->date('usage_date');
             $table->decimal('volume_used_l', 10, 2); // jumlah air yang dipakai
             $table->string('source', 30)->default('irrigation'); // irrigation, manual, adjust, auto_calc
@@ -17,6 +18,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->index(['water_storage_id', 'usage_date']);
+            $table->index(['device_id', 'usage_date']);
         });
     }
 

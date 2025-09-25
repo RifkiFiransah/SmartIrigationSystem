@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\WeatherController;
 use App\Http\Controllers\BMKGForecastController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Models\Device;
+use Carbon\Carbon;
 
 // ===== AUTH ROUTES =====
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -101,6 +103,35 @@ Route::prefix('devices/{device}')->group(function(){
     Route::get('/usage-history', [DeviceUsageController::class, 'usageHistory']);
 });
 
+// ===== DEVICE VALVE & CONNECTION SIMPLE ENDPOINTS =====
+Route::prefix('devices/{device}')->group(function(){
+    Route::get('/valve', function(Device $device){
+        return response()->json([
+            'device_id' => $device->id,
+            'valve_state' => $device->valve_state,
+            'valve_state_changed_at' => $device->valve_state_changed_at,
+        ]);
+    });
+    Route::post('/valve', function(\Illuminate\Http\Request $request, Device $device){
+        $request->validate(['valve_state' => 'required|in:open,closed']);
+        $device->toggleValve($request->valve_state);
+        return response()->json(['ok'=>true]);
+    });
+    Route::get('/connection', function(Device $device){
+        return response()->json([
+            'device_id' => $device->id,
+            'connection_state' => $device->connection_state,
+            'source' => $device->connection_state_source,
+            'last_seen_at' => $device->last_seen_at,
+        ]);
+    });
+    Route::post('/connection', function(\Illuminate\Http\Request $request, Device $device){
+        $request->validate(['state' => 'required|in:online,offline']);
+        $device->setConnectionState($request->state, 'manual');
+        return response()->json(['ok'=>true]);
+    });
+});
+
 // ===== USER ROUTE =====
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -115,7 +146,7 @@ Route::get('/user', function (Request $request) {
 
 // ===== SIMPLE HEALTH CHECK (PUBLIC) =====
 Route::get('/health', function(){
-    return response()->json(['ok'=>true,'time'=>now()->toDateTimeString()]);
+    return response()->json(['ok'=>true,'time'=>Carbon::now()->format('Y-m-d H:i:s')]);
 });
 
 // ===== BMKG FORECAST PROXY =====

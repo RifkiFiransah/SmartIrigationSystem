@@ -7,19 +7,16 @@ use App\Filament\Resources\DeviceResource\RelationManagers;
 use App\Models\Device;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Actions\Action;
+use Filament\Notifications\Notification;
 
 class DeviceResource extends Resource
 {
@@ -104,6 +101,25 @@ class DeviceResource extends Resource
                     ->label('Lokasi')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('connection_state')
+                    ->label('Koneksi')
+                    ->badge()
+                    ->colors([
+                        'success' => 'online',
+                        'danger' => 'offline',
+                    ])
+                    ->formatStateUsing(fn ($state) => $state ? ucfirst($state) : '-')
+                    ->description(fn ($record) => $record->connection_state_source === 'manual' ? 'Manual' : 'Auto')
+                    ->toggleable(),
+                TextColumn::make('valve_state')
+                    ->label('Valve')
+                    ->badge()
+                    ->colors([
+                        'success' => 'open',
+                        'secondary' => 'closed',
+                    ])
+                    ->formatStateUsing(fn ($state) => $state === 'open' ? 'Open' : 'Closed')
+                    ->toggleable(),
                 TextColumn::make('is_active')
                     ->label('Status Aktif')
                     ->badge()
@@ -117,6 +133,36 @@ class DeviceResource extends Resource
                 //
             ])
             ->actions([
+                Action::make('toggleConnection')
+                    ->label('Toggle Online')
+                    ->icon('heroicon-o-signal')
+                    ->color(fn ($record) => $record->connection_state === 'online' ? 'danger' : 'success')
+                    ->requiresConfirmation()
+                    ->action(function ($record, $livewire) {
+                        try {
+                            $new = $record->connection_state === 'online' ? 'offline' : 'online';
+                            $record->setConnectionState($new, 'manual');
+                            $record->refresh();
+                            Notification::make()->title('Status koneksi diubah ke '.strtoupper($new))->success()->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Gagal mengubah status')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+                Action::make('toggleValve')
+                    ->label('Toggle Valve')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->color(fn ($record) => $record->valve_state === 'open' ? 'danger' : 'success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        try {
+                            $prev = $record->valve_state;
+                            $record->toggleValve();
+                            $record->refresh();
+                            Notification::make()->title('Valve '.($prev === 'open' ? 'ditutup' : 'dibuka'))->success()->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Gagal toggle valve')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

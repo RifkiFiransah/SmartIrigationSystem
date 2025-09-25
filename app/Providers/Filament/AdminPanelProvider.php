@@ -7,7 +7,6 @@ use App\Filament\Resources\IrrigationControlResource;
 use App\Filament\Resources\SensorDataResource;
 use App\Filament\Resources\IrrigationValveScheduleResource;
 use App\Filament\Resources\WaterStorageResource;
-use App\Filament\Widgets\SensorDataBarChart;
 use App\Filament\Widgets\SensorStatsOverview;
 use App\Filament\Widgets\TemperatureChart;
 use App\Filament\Widgets\SoilMoistureChart;
@@ -25,7 +24,6 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\View\LegacyComponents\Widget;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -51,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
                 IrrigationControlResource::class, // repurposed to Node Valves
                 IrrigationValveScheduleResource::class,
                 SensorDataResource::class,
-                WaterStorageResource::class
+                WaterStorageResource::class,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -60,19 +58,15 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                // Widgets\AccountWidget::class,
-                // Widgets\FilamentInfoWidget::class,
-                // SensorStatsOverview::class,
-                // ComprehensiveSensorChart::class,
-                // SensorDataBarChart::class,
-                // TemperatureChart::class,
-                // SoilMoistureChart::class,
-                // WaterFlowChart::class,
-                // LightLuxChart::class,
-                // WindSpeedChart::class,
-                // WaterHeightChart::class,
-                // Ina226MetricsChart::class,
-                // RealtimeStatusChart::class,
+                SensorStatsOverview::class,
+                TemperatureChart::class,
+                SoilMoistureChart::class,
+                RealtimeStatusChart::class,
+                LightLuxChart::class,
+                WindSpeedChart::class,
+                WaterHeightChart::class,
+                Ina226MetricsChart::class,
+                ComprehensiveSensorChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -14,70 +13,53 @@ class SensorDataSeeder extends Seeder
      */
     public function run(): void
     {
-    $this->command->info('Creating 24h hourly sensor data (past 24 hours)...');
+        $this->command->info('Creating sensor data for the past 24 hours...');
         
         // Get active device IDs
         $deviceIds = DB::table('devices')->where('is_active', true)->pluck('id')->toArray();
         
         if (empty($deviceIds)) {
-            $this->command->warn('No active devices found. Creating sample device...');
-            DB::table('devices')->insert([
-                'device_name' => 'Sample IoT Node',
-                'device_type' => 'sensor',
-                'location' => 'Greenhouse A',
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $deviceIds = [DB::getPdo()->lastInsertId()];
+            $this->command->warn('No active devices found. Skipping sensor data seeding.');
+            return;
         }
 
-    $sensorData = [];
-    // Track cumulative irrigation usage per device (liters)
-    $irrigationTotals = [];
-        
-    // Generate full 24 hours (hourly) including current hour going backwards
-    $now = Carbon::now();
+        $sensorData = [];
+        $now = Carbon::now();
         
         foreach ($deviceIds as $deviceId) {
-            // Generate 24 readings (one per hour) from oldest to newest for smoother charts
-            for ($h = 23; $h >= 0; $h--) {
-                $timestamp = $now->copy()->subHours($h)->minute(0)->second(0)->addMinutes(rand(0,5));
-                $timestampHour = (int)$timestamp->format('G');
+            // Generate 6 readings (4-hour intervals) for the past 24 hours
+            for ($h = 20; $h >= 0; $h -= 4) {
+                $timestamp = $now->copy()->subHours($h)->startOfHour()->addMinutes(rand(0, 59));
+                $hour = (int)$timestamp->format('G');
                 
-                // Simple realistic sensor values based on device ID for variety
-                $groundTemp = $this->getTemperatureByDevice($deviceId, $timestampHour);
-                $soil_moisture_pct = $this->getSoilMoistureByDevice($deviceId, $timestampHour);
-                $water_height_cm = $this->getWaterHeightByDevice($deviceId); 
-
-                // Cumulative irrigation usage (simulate increment only when moisture low)
-                if (!array_key_exists($deviceId, $irrigationTotals)) {
-                    $irrigationTotals[$deviceId] = rand(50, 150) / 10; // initial 5.0 - 15.0 L
-                }
-                $increment = ($soil_moisture_pct < 40) ? (rand(5, 25) / 100) : (rand(0, 5) / 100); // 0.00 - 0.25 L
-                $irrigationTotals[$deviceId] = round($irrigationTotals[$deviceId] + $increment, 3);
-
-                // Battery: 3.7V - 4.2V typical Li-Ion with slight drain pattern by hour
-                $battery_voltage_v = round(4.20 - (($timestampHour / 24) * rand(5,15) / 100), 2); // simplistic
-                
-                // Determine status
-                $status = $this->getSimpleStatus($groundTemp, $soil_moisture_pct);
+                // Generate realistic sensor values based on device ID and time
+                $temperature = $this->getTemperatureByDevice($deviceId, $hour);
+                $soilMoisture = $this->getSoilMoistureByDevice($deviceId, $hour);
+                $waterHeight = $this->getWaterHeightByDevice($deviceId);
+                $lightIntensity = $this->getLightByHour($hour);
+                $batteryVoltage = round(4.20 - (($hour / 24) * rand(5, 15) / 100), 2);
+                $irrigationUsage = round(rand(50, 150) / 10, 3);
+                $status = $this->getSimpleStatus($temperature, $soilMoisture);
                 
                 $sensorData[] = [
                     'device_id' => $deviceId,
-                    // Legacy fields (keep for compatibility)
-                    'temperature' => $groundTemp, // legacy field kept
-                    'humidity' => rand(45, 75), // Legacy field
-                    'soil_moisture' => $soil_moisture_pct,
-                    'water_flow' => null, // Not used now
-                    'light_intensity' => null,
-
-                    // Device-centric new schema fields
-                    'ground_temperature_c' => $groundTemp,
-                    'soil_moisture_pct' => $soil_moisture_pct,
-                    'water_height_cm' => $water_height_cm,
-                    'irrigation_usage_total_l' => $irrigationTotals[$deviceId],
-                    'battery_voltage_v' => $battery_voltage_v,
+                    'temperature' => $temperature,
+                    'humidity' => rand(45, 75),
+                    'soil_moisture' => $soilMoisture,
+                    'water_flow' => null,
+                    'light_intensity' => $lightIntensity,
+                    'ground_temperature_c' => $temperature,
+                    'soil_moisture_pct' => $soilMoisture,
+                    'water_height_cm' => $waterHeight,
+                    'irrigation_usage_total_l' => $irrigationUsage,
+                    'battery_voltage_v' => $batteryVoltage,
+                    'ph_level' => $this->getPhByDevice($deviceId),
+                    'nitrogen_level' => $this->getNitrogenByDevice($deviceId),
+                    'phosphorus_level' => $this->getPhosphorusByDevice($deviceId),
+                    'potassium_level' => $this->getPotassiumByDevice($deviceId),
+                    'ina226_power_mw' => $this->getPowerByDevice($deviceId),
+                    'ina226_current_ma' => $this->getCurrentByDevice($deviceId),
+                    'ina226_voltage_v' => $this->getVoltageByDevice($deviceId),
                     
                     // Timing fields
                     'device_ts' => $timestamp,
@@ -103,7 +85,7 @@ class SensorDataSeeder extends Seeder
     /**
      * Get realistic light values based on hour (day/night cycle)
      */
-    private function getLightByHour(int $hour): int
+    private function getLightByHour(int $hour): ?int
     {
         return match (true) {
             $hour >= 6 && $hour <= 8 => rand(10000, 30000), // Morning
@@ -199,5 +181,80 @@ class SensorDataSeeder extends Seeder
         }
         
         return 'normal';
+    }
+
+    /**
+     * Get pH level by device
+     */
+    private function getPhByDevice(int $deviceId): float
+    {
+        $basePh = 6.5 + ($deviceId % 4) * 0.3; // 6.5-7.7 range
+        return round($basePh + rand(-10, 10) / 100, 2);
+    }
+
+    /**
+     * Get nitrogen level by device
+     */
+    private function getNitrogenByDevice(int $deviceId): float
+    {
+        $baseNitrogen = 100 + ($deviceId % 5) * 20; // 100-180 mg/kg
+        return round($baseNitrogen + rand(-20, 20), 1);
+    }
+
+    /**
+     * Get phosphorus level by device
+     */
+    private function getPhosphorusByDevice(int $deviceId): float
+    {
+        $basePhosphorus = 30 + ($deviceId % 4) * 10; // 30-60 mg/kg
+        return round($basePhosphorus + rand(-10, 10), 1);
+    }
+
+    /**
+     * Get potassium level by device
+     */
+    private function getPotassiumByDevice(int $deviceId): float
+    {
+        $basePotassium = 200 + ($deviceId % 6) * 30; // 200-350 mg/kg
+        return round($basePotassium + rand(-30, 30), 1);
+    }
+
+    /**
+     * Get power consumption by device (INA226 sensor)
+     */
+    private function getPowerByDevice(int $deviceId): ?float
+    {
+        // Only certain devices have INA226 power sensors
+        return match ($deviceId) {
+            7 => round(rand(50, 150) + rand(0, 10) / 10, 3), // Node 7 has power measurement
+            10 => round(rand(200, 500) + rand(0, 50) / 10, 3), // Pump has higher power consumption
+            default => null, // Other devices don't have INA226
+        };
+    }
+
+    /**
+     * Get current measurement by device (INA226 sensor)
+     */
+    private function getCurrentByDevice(int $deviceId): ?float
+    {
+        // Only devices with INA226 have current measurement
+        return match ($deviceId) {
+            7 => round(rand(20, 50) + rand(0, 10) / 10, 3), // Node 7
+            10 => round(rand(100, 200) + rand(0, 20) / 10, 3), // Pump
+            default => null,
+        };
+    }
+
+    /**
+     * Get voltage measurement by device (INA226 sensor)
+     */
+    private function getVoltageByDevice(int $deviceId): ?float
+    {
+        // Only devices with INA226 have voltage measurement
+        return match ($deviceId) {
+            7 => round(3.3 + rand(-5, 5) / 100, 3), // Node 7 - 3.3V supply
+            10 => round(12.0 + rand(-10, 10) / 100, 3), // Pump - 12V supply
+            default => null,
+        };
     }
 }
