@@ -6,11 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <meta name="theme-color" :content="darkMode ? '#0f172a' : '#ffffff'" />
-    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
+    <meta http-equiv="Permissions-Policy"
+        content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <title>Irigasi Pintar</title>
     <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
     <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
+    @if (app()->environment('production'))
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <script src="{{ asset('js/app.js') }}"></script>
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Leaflet for interactive map (no API key needed) -->
@@ -144,15 +151,15 @@
                 scrollbar-width: thin;
                 scrollbar-color: #d1d5db transparent;
             }
-            
+
             .metrics-container::-webkit-scrollbar {
                 height: 4px;
             }
-            
+
             .metrics-container::-webkit-scrollbar-track {
                 background: transparent;
             }
-            
+
             .metrics-container::-webkit-scrollbar-thumb {
                 background: #d1d5db;
                 border-radius: 2px;
@@ -161,9 +168,19 @@
 
         /* Rain animation keyframes */
         @keyframes rainDrop {
-            0% { transform: translateY(-100%); opacity: 0; }
-            50% { opacity: 1; }
-            100% { transform: translateY(100%); opacity: 0; }
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(100%);
+                opacity: 0;
+            }
         }
 
         .rain-drop {
@@ -172,8 +189,15 @@
 
         /* Battery charging animation */
         @keyframes batteryPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         .battery-full {
@@ -487,13 +511,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <template x-for="m in topMetricCards" :key="m.key">
-                    <div
-                        class="relative bg-white border border-gray-200 rounded-2xl p-4 flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group"
+                    <div class="relative bg-white border border-gray-200 rounded-2xl p-4 flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group"
                         :class="getCardTheme(m.key)">
                         <!-- Background gradient overlay -->
                         <div class="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
                             :style="getCardGradient(m.key)"></div>
-                        
+
                         <!-- Header with icon and title -->
                         <div class="relative z-10 flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2">
@@ -512,16 +535,19 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 <div class="relative w-20 h-20 mb-2">
                                     <svg class="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
                                         <!-- Background circle -->
-                                        <circle cx="40" cy="40" r="32" stroke="#e5e7eb" stroke-width="6" fill="none" />
+                                        <circle cx="40" cy="40" r="32" stroke="#e5e7eb"
+                                            stroke-width="6" fill="none" />
                                         <!-- Progress circle -->
-                                        <circle cx="40" cy="40" r="32" :stroke="getGaugeColor(m.key)" stroke-width="6" fill="none" 
-                                            stroke-linecap="round" :stroke-dasharray="`${2 * Math.PI * 32}`" 
+                                        <circle cx="40" cy="40" r="32" :stroke="getGaugeColor(m.key)"
+                                            stroke-width="6" fill="none" stroke-linecap="round"
+                                            :stroke-dasharray="`${2 * Math.PI * 32}`"
                                             :stroke-dashoffset="`${2 * Math.PI * 32 * (1 - m.pct / 100)}`"
                                             class="transition-all duration-500" />
                                     </svg>
                                     <!-- Center value -->
                                     <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span class="text-lg font-bold" x-text="m.display" :style="`color: ${getGaugeColor(m.key)}`"></span>
+                                        <span class="text-lg font-bold" x-text="m.display"
+                                            :style="`color: ${getGaugeColor(m.key)}`"></span>
                                         <span class="text-[9px] text-gray-500" x-text="m.unit"></span>
                                     </div>
                                 </div>
@@ -539,22 +565,24 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             <div class="relative z-10 flex flex-col">
                                 <!-- Value and unit -->
                                 <div class="flex items-end justify-between mb-2">
-                                    <div class="text-2xl font-bold" x-text="m.display" :style="`color: ${getGaugeColor(m.key)}`"></div>
+                                    <div class="text-2xl font-bold" x-text="m.display"
+                                        :style="`color: ${getGaugeColor(m.key)}`"></div>
                                     <div class="text-xs text-gray-500" x-text="m.unit"></div>
                                 </div>
-                                
+
                                 <!-- Horizontal progress bar -->
                                 <div class="w-full h-6 bg-gray-100 rounded-full relative overflow-hidden mb-2">
                                     <!-- Background gradient -->
                                     <div class="absolute inset-0 opacity-20" :style="getLinearGradient(m.key)"></div>
-                                    
+
                                     <!-- Progress fill with rounded shape -->
                                     <div class="absolute left-0 top-0 bottom-0 rounded-full transition-all duration-1000 flex items-center justify-end pr-2"
                                         :style="`width: ${Math.max(20, m.pct)}%; background: ${getGaugeColor(m.key)}`">
-                                        <span class="text-white text-[10px] font-bold" x-text="Math.round(m.pct) + '%'"></span>
+                                        <span class="text-white text-[10px] font-bold"
+                                            x-text="Math.round(m.pct) + '%'"></span>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Range indicators -->
                                 <div class="flex items-center justify-between text-[9px] text-gray-400">
                                     <span x-text="m.min + m.unit"></span>
@@ -568,25 +596,30 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         <template x-if="m.type==='plain'">
                             <div class="relative z-10 flex flex-col items-center justify-center h-full">
                                 <!-- Large value display -->
-                                <div class="text-2xl font-bold mb-1 text-center" x-text="m.display" :style="`color: ${getGaugeColor(m.key)}`"></div>
+                                <div class="text-2xl font-bold mb-1 text-center" x-text="m.display"
+                                    :style="`color: ${getGaugeColor(m.key)}`"></div>
                                 <!-- Unit -->
                                 <div class="text-xs text-gray-500 mb-2" x-text="m.unit"></div>
                                 <!-- Status indicator -->
-                                <div class="text-[10px] text-gray-400 px-2 py-1 rounded-full bg-gray-100" x-text="m.desc"></div>
+                                <div class="text-[10px] text-gray-400 px-2 py-1 rounded-full bg-gray-100"
+                                    x-text="m.desc"></div>
                                 <!-- Decorative animated drops for rain -->
                                 <template x-if="m.key === 'rain'">
                                     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                                        <div class="absolute top-2 left-3 w-1 h-1 bg-blue-300 rounded-full opacity-60 animate-bounce" style="animation-delay: 0s;"></div>
-                                        <div class="absolute top-4 right-4 w-1 h-1 bg-blue-400 rounded-full opacity-40 animate-bounce" style="animation-delay: 0.5s;"></div>
-                                        <div class="absolute bottom-6 left-1/2 w-1 h-1 bg-blue-300 rounded-full opacity-50 animate-bounce" style="animation-delay: 1s;"></div>
+                                        <div class="absolute top-2 left-3 w-1 h-1 bg-blue-300 rounded-full opacity-60 animate-bounce"
+                                            style="animation-delay: 0s;"></div>
+                                        <div class="absolute top-4 right-4 w-1 h-1 bg-blue-400 rounded-full opacity-40 animate-bounce"
+                                            style="animation-delay: 0.5s;"></div>
+                                        <div class="absolute bottom-6 left-1/2 w-1 h-1 bg-blue-300 rounded-full opacity-50 animate-bounce"
+                                            style="animation-delay: 1s;"></div>
                                     </div>
                                 </template>
                             </div>
                         </template>
 
                         <!-- Subtle background icon -->
-                        <div class="absolute right-2 bottom-2 opacity-5 metric-icon" 
-                            x-html="metricIcon(m.key)" style="transform: scale(1.5);"></div>
+                        <div class="absolute right-2 bottom-2 opacity-5 metric-icon" x-html="metricIcon(m.key)"
+                            style="transform: scale(1.5);"></div>
                     </div>
                 </template>
             </div>
@@ -870,8 +903,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
     <!-- Device Detail Modal -->
     <div x-cloak x-show="showDeviceModal"
         class="fixed inset-0 z-50 modal-overlay flex items-start md:items-center justify-center p-4 md:p-8 bg-black/40 backdrop-blur-sm"
-        @keydown.escape.window="closeDeviceModal()"
-        style="z-index: 9999 !important;">
+        @keydown.escape.window="closeDeviceModal()" style="z-index: 9999 !important;">
         <div x-show="showDeviceModal" x-transition.opacity x-transition.scale.origin.top
             class="bg-white w-full max-w-3xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] relative"
             style="z-index: 10000 !important;">
@@ -1299,7 +1331,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 getCardTheme(key) {
                     const themes = {
                         temp: 'hover:border-red-200',
-                        humidity: 'hover:border-blue-200', 
+                        humidity: 'hover:border-blue-200',
                         light: 'hover:border-yellow-200',
                         wind: 'hover:border-cyan-200',
                         rain: 'hover:border-indigo-200',
@@ -1443,7 +1475,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     map.fitBounds(poly.getBounds(), {
                         padding: [20, 20]
                     });
-                    
+
                     // Force low z-index for leaflet container to prevent modal overlap
                     setTimeout(() => {
                         const container = document.getElementById('leafletMap');
@@ -1454,7 +1486,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             }
                         }
                     }, 100);
-                    
+
                     this.leafletInited = true;
                 },
                 initLeafletFull() {
@@ -1494,7 +1526,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             light_lux: x.light_lux,
                             recorded_at: x.recorded_at,
                             status: x.status || 'normal',
-                            water_usage_today_l: x.water_usage_today_l ? parseFloat(x.water_usage_today_l) : null
+                            water_usage_today_l: x.water_usage_today_l ? parseFloat(x.water_usage_today_l) :
+                                null
                         }));
                         this.computeTopMetrics();
                     } catch (e) {

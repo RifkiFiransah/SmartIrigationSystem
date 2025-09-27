@@ -22,3 +22,17 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Build files - should be generated on server
+public/css/filament/
+public/js/filament/
+public/build/
+
+# Lock files in production can differ
+composer.lock
+
+# Other generated files
+bootstrap/cache/*.php
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/

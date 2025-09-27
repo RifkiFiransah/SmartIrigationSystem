@@ -1,0 +1,45 @@
+name: Deploy Laravel Filament
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT }}
+        script: |
+          cd /path/to/your/laravel/project
+          
+          # Force clean state
+          git reset --hard HEAD
+          git clean -fd
+          
+          # Pull latest code
+          git pull origin main
+          
+          # Install dependencies
+          composer install --no-dev --optimize-autoloader
+          
+          # Build Filament assets
+          php artisan filament:assets
+          
+          # Build frontend assets
+          npm install && npm run build
+          
+          # Laravel commands
+          php artisan migrate --force
+          php artisan config:cache
+          php artisan route:cache  
+          php artisan view:cache
+          php artisan queue:restart
+          
+          echo "Deployment completed!"
