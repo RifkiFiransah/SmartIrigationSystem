@@ -273,44 +273,62 @@ class SensorDataController extends Controller
     public function latestPerDevice(Request $request): JsonResponse
     {
         try {
-            // NOTE: After schema redesign (Sept 2025) we standardized per-device fields:
-            //  - ground_temperature_c (replaces temperature/temperature_c)
-            //  - soil_moisture_pct (primary moisture metric)
-            //  - battery_voltage_v (simple battery) OR derive from INA226 bus voltage if present
-            // Provide backward compatible aliases expected by frontend (temperature_c, temperature, soil_moisture).
-            $latestPerDevice = DB::table('sensor_data as sd1')
-                ->select([
-                    'sd1.device_id',
-                    'devices.device_name',
-                    'devices.location',
-                    DB::raw('sd1.ground_temperature_c as temperature_c'),
-                    DB::raw('sd1.ground_temperature_c as temperature'),
-                    'sd1.humidity',
-                    DB::raw('sd1.soil_moisture_pct as soil_moisture'),
-                    'sd1.soil_moisture_pct',
-                    'sd1.water_height_cm',
-                    'sd1.irrigation_usage_total_l',
-                    DB::raw('COALESCE(sd1.battery_voltage_v, sd1.ina226_bus_voltage_v) AS battery_voltage_v'),
-                    'sd1.ina226_power_mw',
-                    // Aggregate water usage logs (today) per device
-                    DB::raw('(
-                        SELECT COALESCE(
-                            (SELECT SUM(volume_used_l) FROM water_usage_logs w1 WHERE w1.device_id = sd1.device_id AND w1.usage_date = CURDATE()),
-                            (SELECT SUM(volume_used_l) FROM water_usage_logs w2 WHERE w2.device_id = sd1.device_id AND w2.usage_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY))
-                        )
-                    ) AS water_usage_today_l'),
-                    'sd1.status',
-                    'sd1.recorded_at'
-                ])
-                ->join('devices', 'devices.id', '=', 'sd1.device_id')
-                ->whereRaw('sd1.recorded_at = (
-                    SELECT MAX(sd2.recorded_at) 
-                    FROM sensor_data sd2 
-                    WHERE sd2.device_id = sd1.device_id
-                )')
-                ->where('devices.is_active', true)
-                ->orderBy('sd1.device_id')
-                ->get();
+            // Get all active devices first
+            $devices = Device::where('is_active', true)->get();
+            
+            $latestPerDevice = [];
+            
+            foreach ($devices as $device) {
+                // Get latest sensor data for each device
+                $latestData = SensorData::where('device_id', $device->id)
+                    ->orderBy('recorded_at', 'desc')
+                    ->first();
+                
+                if ($latestData) {
+                    // Get today's water usage for this device
+                    $waterUsageToday = DB::table('water_usage_logs')
+                        ->where('device_id', $device->id)
+                        ->whereDate('usage_date', now()->toDateString())
+                        ->sum('volume_used_l') ?? 0;
+                    
+                    $latestPerDevice[] = [
+                        'device_id' => $device->id,
+                        'device_name' => $device->device_name,
+                        'location' => $device->location,
+                        'temperature_c' => $latestData->ground_temperature_c ?? $latestData->temperature_c ?? $latestData->temperature,
+                        'temperature' => $latestData->ground_temperature_c ?? $latestData->temperature_c ?? $latestData->temperature,
+                        'humidity' => $latestData->humidity,
+                        'soil_moisture' => $latestData->soil_moisture_pct ?? $latestData->soil_moisture,
+                        'soil_moisture_pct' => $latestData->soil_moisture_pct,
+                        'water_height_cm' => $latestData->water_height_cm,
+                        'irrigation_usage_total_l' => $latestData->irrigation_usage_total_l,
+                        'battery_voltage_v' => $latestData->battery_voltage_v ?? $latestData->ina226_bus_voltage_v,
+                        'ina226_power_mw' => $latestData->ina226_power_mw,
+                        'water_usage_today_l' => $waterUsageToday,
+                        'status' => $latestData->status,
+                        'recorded_at' => $latestData->recorded_at,
+                    ];
+                } else {
+                    // No sensor data for this device yet
+                    $latestPerDevice[] = [
+                        'device_id' => $device->id,
+                        'device_name' => $device->device_name,
+                        'location' => $device->location,
+                        'temperature_c' => null,
+                        'temperature' => null,
+                        'humidity' => null,
+                        'soil_moisture' => null,
+                        'soil_moisture_pct' => null,
+                        'water_height_cm' => null,
+                        'irrigation_usage_total_l' => null,
+                        'battery_voltage_v' => null,
+                        'ina226_power_mw' => null,
+                        'water_usage_today_l' => 0,
+                        'status' => 'no_data',
+                        'recorded_at' => null,
+                    ];
+                }
+            }
 
             return response()->json([
                 'success' => true,

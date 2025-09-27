@@ -42,6 +42,7 @@ Route::prefix('water-storage')->group(function () {
     Route::get('/', [WaterStorageController::class, 'index']);
     Route::get('/tank/{tankName}', [WaterStorageController::class, 'getByTankName']);
     Route::get('/daily-usage', [WaterStorageController::class, 'dailyUsage']);
+    Route::get('/hourly-usage', [WaterStorageController::class, 'hourlyUsage']);
     
     // Protected route for updating volume (for IoT devices)
     Route::post('/update-volume', [WaterStorageController::class, 'updateVolume'])->middleware('auth:sanctum');

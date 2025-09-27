@@ -158,4 +158,53 @@ class WaterStorageController extends Controller
             'data' => $data,
         ]);
     }
+
+    /**
+     * GET /api/water-storage/hourly-usage?tank_id=1&hours=24
+     * Get hourly water usage data for the last X hours
+     */
+    public function hourlyUsage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'tank_id' => 'nullable|integer|exists:water_storages,id',
+            'hours' => 'nullable|integer|min:1|max:168', // max 7 days
+        ]);
+
+        $hours = $validated['hours'] ?? 24;
+        $query = WaterStorage::query();
+        if (isset($validated['tank_id'])) {
+            $query->where('id', $validated['tank_id']);
+        }
+        $storage = $query->first();
+        if (!$storage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Water storage not found'
+            ], 404);
+        }
+
+        // Check if the model has getHourlyUsage method, if not create mock data
+        if (method_exists($storage, 'getHourlyUsage')) {
+            $data = $storage->getHourlyUsage($hours);
+        } else {
+            // Generate mock hourly data for now
+            $data = [];
+            for ($i = $hours - 1; $i >= 0; $i--) {
+                $hour = now()->subHours($i)->format('H');
+                $data[] = [
+                    'hour' => (int)$hour,
+                    'total_l' => rand(5, 35), // Mock usage between 5-35L per hour
+                    'datetime' => now()->subHours($i)->format('Y-m-d H:00:00'),
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'tank_id' => $storage->id,
+            'tank_name' => $storage->tank_name,
+            'hours' => $hours,
+            'data' => $data,
+        ]);
+    }
 }

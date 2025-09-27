@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <meta name="theme-color" :content="darkMode ? '#0f172a' : '#ffffff'" />
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <title>Irigasi Pintar</title>
     <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
     <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Leaflet for interactive map (no API key needed) -->
@@ -484,7 +485,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     x-text="lastUpdated ? ('Update: '+ lastUpdated.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})) : ''">
                 </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <template x-for="m in topMetricCards" :key="m.key">
                     <div
                         class="relative bg-white border border-gray-200 rounded-2xl p-4 flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group"
