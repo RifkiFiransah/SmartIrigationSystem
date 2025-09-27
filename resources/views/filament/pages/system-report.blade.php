@@ -6,7 +6,8 @@
             <div class="mt-4 flex items-center gap-3">
                 <x-filament::button type="submit" icon="heroicon-o-play-circle">Generate</x-filament::button>
                 @if($generated)
-                    <x-filament::button color="success" wire:click="exportCsv" icon="heroicon-o-arrow-down-tray">Export CSV</x-filament::button>
+                    <x-filament::button color="success" wire:click="exportSummaryExcel" icon="heroicon-o-document-arrow-down">Export Excel</x-filament::button>
+                    <x-filament::button color="danger" wire:click="exportSummaryPdf" icon="heroicon-o-document-text">Export PDF</x-filament::button>
                 @endif
             </div>
         </form>
@@ -59,8 +60,8 @@
                         <p class="text-xs text-gray-500 mt-1">Agregasi harian per device periode terpilih.</p>
                     </div>
                     <div class="mt-3">
-                        <x-filament::button size="sm" wire:click="exportCsv" icon="heroicon-o-arrow-down-tray">CSV</x-filament::button>
-                        <x-filament::button size="sm" color="success" class="ml-2" wire:click="exportSummaryExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="success" wire:click="exportSummaryExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="danger" class="ml-2" wire:click="exportSummaryPdf" icon="heroicon-o-document-text">PDF</x-filament::button>
                     </div>
                 </div>
                 <div class="p-4 border rounded bg-white shadow-sm flex flex-col justify-between">
@@ -69,8 +70,8 @@
                         <p class="text-xs text-gray-500 mt-1">Daftar device & status.</p>
                     </div>
                     <div class="mt-3">
-                        <x-filament::button size="sm" wire:click="exportDevicesCsv" icon="heroicon-o-arrow-down-tray">CSV</x-filament::button>
-                        <x-filament::button size="sm" color="success" class="ml-2" wire:click="exportDevicesExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="success" wire:click="exportDevicesExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="danger" class="ml-2" wire:click="exportDevicesPdf" icon="heroicon-o-document-text">PDF</x-filament::button>
                     </div>
                 </div>
                 <div class="p-4 border rounded bg-white shadow-sm flex flex-col justify-between">
@@ -79,8 +80,8 @@
                         <p class="text-xs text-gray-500 mt-1">Data kapasitas & level.</p>
                     </div>
                     <div class="mt-3">
-                        <x-filament::button size="sm" wire:click="exportWaterStoragesCsv" icon="heroicon-o-arrow-down-tray">CSV</x-filament::button>
-                        <x-filament::button size="sm" color="success" class="ml-2" wire:click="exportWaterStoragesExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="success" wire:click="exportWaterStoragesExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="danger" class="ml-2" wire:click="exportWaterStoragesPdf" icon="heroicon-o-document-text">PDF</x-filament::button>
                     </div>
                 </div>
                 <div class="p-4 border rounded bg-white shadow-sm flex flex-col justify-between">
@@ -89,8 +90,8 @@
                         <p class="text-xs text-gray-500 mt-1">Data mentah (maks 50k baris).</p>
                     </div>
                     <div class="mt-3">
-                        <x-filament::button size="sm" wire:click="exportSensorDataCsv" icon="heroicon-o-arrow-down-tray">CSV</x-filament::button>
-                        <x-filament::button size="sm" color="success" class="ml-2" wire:click="exportSensorDataExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="success" wire:click="exportSensorDataExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="danger" class="ml-2" wire:click="exportSensorDataPdf" icon="heroicon-o-document-text">PDF</x-filament::button>
                     </div>
                 </div>
                 <div class="p-4 border rounded bg-white shadow-sm flex flex-col justify-between">
@@ -99,19 +100,11 @@
                         <p class="text-xs text-gray-500 mt-1">Log penggunaan air harian.</p>
                     </div>
                     <div class="mt-3">
-                        <x-filament::button size="sm" wire:click="exportWaterUsageLogsCsv" icon="heroicon-o-arrow-down-tray">CSV</x-filament::button>
-                        <x-filament::button size="sm" color="success" class="ml-2" wire:click="exportWaterUsageLogsExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="success" wire:click="exportWaterUsageLogsExcel" icon="heroicon-o-document-arrow-down">Excel</x-filament::button>
+                        <x-filament::button size="sm" color="danger" class="ml-2" wire:click="exportWaterUsageLogsPdf" icon="heroicon-o-document-text">PDF</x-filament::button>
                     </div>
                 </div>
-                <div class="p-4 border rounded bg-amber-50 border-amber-300 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <h3 class="font-semibold text-amber-800">PDF (Coming Soon)</h3>
-                        <p class="text-xs text-amber-700 mt-1">Export PDF akan ditambahkan berikutnya.</p>
-                    </div>
-                    <div class="mt-3 flex gap-2">
-                        <x-filament::button disabled size="sm">PDF</x-filament::button>
-                    </div>
-                </div>
+
             </div>
 
             <div class="overflow-auto border rounded bg-white shadow">

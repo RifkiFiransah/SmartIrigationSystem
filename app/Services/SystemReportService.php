@@ -81,7 +81,9 @@ class SystemReportService
         $deviceNames = $deviceListQuery->pluck('device_name', 'id');
 
         $rows = collect($index)->values()->map(function ($row) use ($deviceNames) {
-            $row['device_name'] = $deviceNames[$row['device_id']] ?? ('Device #' . $row['device_id']);
+            $deviceName = $deviceNames[$row['device_id']] ?? ('Device #' . $row['device_id']);
+            // Sanitize device name to prevent UTF-8 issues
+            $row['device_name'] = mb_convert_encoding($deviceName, 'UTF-8', 'UTF-8');
             if (! is_null($row['irrigation_usage_delta_l']) && $row['irrigation_usage_delta_l'] < 0) {
                 $row['irrigation_usage_delta_l'] = null;
             }

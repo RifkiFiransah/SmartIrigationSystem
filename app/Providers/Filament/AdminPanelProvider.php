@@ -81,6 +81,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->renderHook(
+                'panels::head.end',
+                fn (): string => '<script src="' . asset('js/alpine-fixes.js') . '"></script>'
+            );
     }
 }
