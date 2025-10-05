@@ -1885,6 +1885,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 scales: {
                                     x: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1908,6 +1918,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     },
                                     y: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Intensitas Cahaya (lux)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1982,6 +2002,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 scales: {
                                     x: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2005,6 +2035,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     },
                                     y: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Ketinggian Air (cm)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2074,6 +2114,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2090,6 +2140,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Kelembapan Tanah (%)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2153,6 +2213,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2169,6 +2239,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Suhu (°C)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2233,6 +2313,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2249,6 +2339,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Kelembapan Udara (%)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
