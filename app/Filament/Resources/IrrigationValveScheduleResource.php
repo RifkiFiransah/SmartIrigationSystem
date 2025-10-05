@@ -16,9 +16,9 @@ class IrrigationValveScheduleResource extends Resource
     protected static ?string $model = IrrigationValveSchedule::class;
     protected static ?string $navigationGroup = 'Sistem Irigasi';
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
-    protected static ?string $navigationLabel = 'Jadwal Katup';
-    protected static ?string $modelLabel = 'Jadwal Katup';
-    protected static ?string $pluralModelLabel = 'Jadwal Katup';
+    protected static ?string $navigationLabel = 'Jadwal Node Irigasi';
+    protected static ?string $modelLabel = 'Jadwal Node Irigasi';
+    protected static ?string $pluralModelLabel = 'Jadwal Node Irigasi';
     protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form

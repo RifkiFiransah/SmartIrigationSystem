@@ -11,6 +11,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -34,8 +35,9 @@ class DeviceResource extends Resource
                 TextInput::make('device_id')
                     ->label('ID Perangkat')
                     ->placeholder('ID Perangkat (otomatis)')
-                    ->readOnly()
-                    ->unique(ignoreRecord: true)
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->visible(fn ($record) => $record !== null)
                     ->maxLength(255),
                 TextInput::make('device_name')
                     ->label('Nama Perangkat')
@@ -51,36 +53,66 @@ class DeviceResource extends Resource
                     ->default(true)
                     ->inline()
                     ->required(),
-                Section::make('Data Sensor Awal (Opsional)')
-                    ->description('Isi jika ingin langsung membuat catatan sensor awal untuk perangkat baru.')
+                    
+                Forms\Components\Section::make('Data Sensor Awal')
+                    ->description('Aktifkan toggle di bawah untuk mengisi data sensor awal perangkat.')
                     ->schema([
-                        Toggle::make('init_sensor_enable')
-                            ->label('Isi Data Awal?')
-                            ->reactive(),
-                        Grid::make(3)
-                            ->schema([
-                                TextInput::make('init_ground_temperature_c')
-                                    ->numeric()
-                                    ->label('Suhu Tanah (°C)')
-                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
-                                TextInput::make('init_soil_moisture_pct')
-                                    ->numeric()
-                                    ->label('Kelembapan Tanah (%)')
-                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
-                                TextInput::make('init_irrigation_usage_total_l')
-                                    ->numeric()
-                                    ->label('Total Irigasi (L)')
-                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
-                                TextInput::make('init_battery_voltage_v')
-                                    ->numeric()
-                                    ->label('Tegangan Baterai (V)')
-                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
-                                TextInput::make('init_ina226_power_mw')
-                                    ->numeric()
-                                    ->label('Daya (mW)')
-                                    ->visible(fn($get)=> (bool)$get('init_sensor_enable')),
-                            ]),
-                    ])->collapsed(),
+                        Forms\Components\Toggle::make('init_sensor_enable')
+                            ->label('Isi Data Awal Sensor?')
+                            ->live()
+                            ->default(false)
+                            ->columnSpanFull(),
+                            
+                        Forms\Components\TextInput::make('init_ground_temperature_c')
+                            ->numeric()
+                            ->label('Suhu Tanah')
+                            ->suffix('°C')
+                            ->step(0.1)
+                            ->placeholder('Contoh: 28.5')
+                            ->visible(fn(Get $get): bool => $get('init_sensor_enable') === true),
+                            
+                        Forms\Components\TextInput::make('init_soil_moisture_pct')
+                            ->numeric()
+                            ->label('Kelembapan Tanah')
+                            ->suffix('%')
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.1)
+                            ->placeholder('Contoh: 65.2')
+                            ->visible(fn(Get $get): bool => $get('init_sensor_enable') === true),
+                            
+                        Forms\Components\TextInput::make('init_irrigation_usage_total_l')
+                            ->numeric()
+                            ->label('Total Irigasi')
+                            ->suffix('Liter')
+                            ->minValue(0)
+                            ->step(0.001)
+                            ->placeholder('Contoh: 12.5')
+                            ->visible(fn(Get $get): bool => $get('init_sensor_enable') === true),
+                            
+                        Forms\Components\TextInput::make('init_battery_voltage_v')
+                            ->numeric()
+                            ->label('Tegangan Baterai')
+                            ->suffix('Volt')
+                            ->minValue(0)
+                            ->maxValue(5)
+                            ->step(0.01)
+                            ->placeholder('Contoh: 3.8')
+                            ->visible(fn(Get $get): bool => $get('init_sensor_enable') === true),
+                            
+                        Forms\Components\TextInput::make('init_ina226_power_mw')
+                            ->numeric()
+                            ->label('Daya INA226')
+                            ->suffix('mW')
+                            ->minValue(0)
+                            ->step(0.1)
+                            ->placeholder('Contoh: 150.5')
+                            ->visible(fn(Get $get): bool => $get('init_sensor_enable') === true),
+                    ])
+                    ->columns(3)
+                    ->collapsible()
+                    ->persistCollapsed()
+                    ->collapsed(false),
             ])->columns(2);
             // ->columnSpan([1, 2]);
     }
@@ -133,36 +165,52 @@ class DeviceResource extends Resource
                 //
             ])
             ->actions([
-                Action::make('toggleConnection')
-                    ->label('Toggle Online')
-                    ->icon('heroicon-o-signal')
-                    ->color(fn ($record) => $record->connection_state === 'online' ? 'danger' : 'success')
-                    ->requiresConfirmation()
-                    ->action(function ($record, $livewire) {
-                        try {
-                            $new = $record->connection_state === 'online' ? 'offline' : 'online';
-                            $record->setConnectionState($new, 'manual');
-                            $record->refresh();
-                            Notification::make()->title('Status koneksi diubah ke '.strtoupper($new))->success()->send();
-                        } catch (\Throwable $e) {
-                            Notification::make()->title('Gagal mengubah status')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
-                Action::make('toggleValve')
-                    ->label('Toggle Valve')
-                    ->icon('heroicon-o-adjustments-horizontal')
-                    ->color(fn ($record) => $record->valve_state === 'open' ? 'danger' : 'success')
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        try {
-                            $prev = $record->valve_state;
-                            $record->toggleValve();
-                            $record->refresh();
-                            Notification::make()->title('Valve '.($prev === 'open' ? 'ditutup' : 'dibuka'))->success()->send();
-                        } catch (\Throwable $e) {
-                            Notification::make()->title('Gagal toggle valve')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
+                // Action::make('toggleConnection')
+                //     ->label('Toggle Online')
+                //     ->icon('heroicon-o-signal')
+                //     ->color(fn ($record) => $record->connection_state === 'online' ? 'danger' : 'success')
+                //     ->requiresConfirmation()
+                //     ->action(function ($record) {
+                //         try {
+                //             $new = $record->connection_state === 'online' ? 'offline' : 'online';
+                //             $record->setConnectionState($new, 'manual');
+                //             $record->refresh();
+                //             Notification::make()
+                //                 ->title('Status koneksi diubah ke '.strtoupper($new))
+                //                 ->success()
+                //                 ->send();
+                //         } catch (\Throwable $e) {
+                //             Notification::make()
+                //                 ->title('Gagal mengubah status')
+                //                 ->body($e->getMessage())
+                //                 ->danger()
+                //                 ->send();
+                //         }
+                //     })
+                //     ->after(fn () => redirect()->refresh()),
+                // Action::make('toggleValve')
+                //     ->label('Toggle Valve')
+                //     ->icon('heroicon-o-adjustments-horizontal')
+                //     ->color(fn ($record) => $record->valve_state === 'open' ? 'danger' : 'success')
+                //     ->requiresConfirmation()
+                //     ->action(function ($record) {
+                //         try {
+                //             $prev = $record->valve_state;
+                //             $record->toggleValve();
+                //             $record->refresh();
+                //             Notification::make()
+                //                 ->title('Valve '.($prev === 'open' ? 'ditutup' : 'dibuka'))
+                //                 ->success()
+                //                 ->send();
+                //         } catch (\Throwable $e) {
+                //             Notification::make()
+                //                 ->title('Gagal toggle valve')
+                //                 ->body($e->getMessage())
+                //                 ->danger()
+                //                 ->send();
+                //         }
+                //     })
+                //     ->after(fn () => redirect()->refresh()),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

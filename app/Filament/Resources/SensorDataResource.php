@@ -413,7 +413,7 @@ class SensorDataResource extends Resource
             'index' => Pages\ListSensorData::route('/'),
             'create' => Pages\CreateSensorData::route('/create'),
             'edit' => Pages\EditSensorData::route('/{record}/edit'),
-            // 'view' => Pages\ViewSensorData::route('/{record}'),
+            // 'view' => Pages\ViewSensorData::route('/{record}'),            
         ];
     }
     

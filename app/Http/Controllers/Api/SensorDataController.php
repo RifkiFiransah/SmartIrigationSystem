@@ -296,17 +296,25 @@ class SensorDataController extends Controller
                         'device_name' => $device->device_name,
                         'location' => $device->location,
                         'temperature_c' => $latestData->ground_temperature_c ?? $latestData->temperature_c ?? $latestData->temperature,
+                        'ground_temperature_c' => $latestData->ground_temperature_c ?? $latestData->temperature_c,
                         'temperature' => $latestData->ground_temperature_c ?? $latestData->temperature_c ?? $latestData->temperature,
                         'humidity' => $latestData->humidity,
                         'soil_moisture' => $latestData->soil_moisture_pct ?? $latestData->soil_moisture,
                         'soil_moisture_pct' => $latestData->soil_moisture_pct,
                         'water_height_cm' => $latestData->water_height_cm,
+                        'light_lux' => $latestData->light_lux,
+                        'wind_speed_ms' => $latestData->wind_speed_ms,
                         'irrigation_usage_total_l' => $latestData->irrigation_usage_total_l,
                         'battery_voltage_v' => $latestData->battery_voltage_v ?? $latestData->ina226_bus_voltage_v,
                         'ina226_power_mw' => $latestData->ina226_power_mw,
                         'water_usage_today_l' => $waterUsageToday,
                         'status' => $latestData->status,
                         'recorded_at' => $latestData->recorded_at,
+                        // ✅ Add device connection and valve state from devices table
+                        'connection_state' => $device->connection_state ?? 'offline',
+                        'valve_state' => $device->valve_state ?? 'closed',
+                        'is_active' => $device->is_active,
+                        'last_seen_at' => $device->last_seen_at,
                     ];
                 } else {
                     // No sensor data for this device yet
@@ -315,17 +323,25 @@ class SensorDataController extends Controller
                         'device_name' => $device->device_name,
                         'location' => $device->location,
                         'temperature_c' => null,
+                        'ground_temperature_c' => null,
                         'temperature' => null,
                         'humidity' => null,
                         'soil_moisture' => null,
                         'soil_moisture_pct' => null,
                         'water_height_cm' => null,
+                        'light_lux' => null,
+                        'wind_speed_ms' => null,
                         'irrigation_usage_total_l' => null,
                         'battery_voltage_v' => null,
                         'ina226_power_mw' => null,
                         'water_usage_today_l' => 0,
                         'status' => 'no_data',
                         'recorded_at' => null,
+                        // ✅ Add device connection and valve state from devices table even when no sensor data
+                        'connection_state' => $device->connection_state ?? 'offline',
+                        'valve_state' => $device->valve_state ?? 'closed',
+                        'is_active' => $device->is_active,
+                        'last_seen_at' => $device->last_seen_at,
                     ];
                 }
             }

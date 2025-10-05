@@ -13,9 +13,9 @@ class IrrigationValveLogResource extends Resource
     protected static ?string $model = IrrigationValveLog::class;
     protected static ?string $navigationGroup = 'Sistem Irigasi';
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
-    protected static ?string $navigationLabel = 'Log Katup';
-    protected static ?string $modelLabel = 'Log Katup';
-    protected static ?string $pluralModelLabel = 'Log Katup';
+    protected static ?string $navigationLabel = 'Riwayat Node Valve';
+    protected static ?string $modelLabel = 'Riwayat Node Valve';
+    protected static ?string $pluralModelLabel = 'Riwayat Node Valve';
     protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form

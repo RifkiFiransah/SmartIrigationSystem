@@ -16,11 +16,11 @@ class IrrigationControlResource extends Resource
     
     protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
     
-    protected static ?string $navigationLabel = 'Katup Node';
+    protected static ?string $navigationLabel = 'Kontrol Node Irigasi';
     
-    protected static ?string $modelLabel = 'Katup Node';
+    protected static ?string $modelLabel = 'Kontrol Node Irigasi';
     
-    protected static ?string $pluralModelLabel = 'Katup Node';
+    protected static ?string $pluralModelLabel = 'Kontrol Node Irigasi';
     
     protected static ?string $navigationGroup = 'Sistem Irigasi';
     

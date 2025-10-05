@@ -14,19 +14,31 @@ class SensorDataExport implements FromCollection, WithHeadings
     {
         return $this->sensorRows->map(function ($r) {
             return [
-                $r->device_id,
+                $r->id,
+                $r->device_name,
                 $r->recorded_at,
-                $r->ground_temperature_c,
-                $r->soil_moisture_pct,
-                $r->water_height_cm,
-                $r->battery_voltage_v,
-                $r->irrigation_usage_total_l,
+                $r->ground_temperature_c ?? 'N/A',
+                $r->soil_moisture_pct ?? 'N/A',
+                $r->water_height_cm ?? 'N/A',
+                $r->battery_voltage_v ?? 'N/A',
+                $r->irrigation_usage_total_l ?? 'N/A',
+                $r->status ?? 'normal',
             ];
         });
     }
 
     public function headings(): array
     {
-        return ['Device ID','Recorded At','Ground Temp (C)','Soil Moisture (%)','Water Height (cm)','Battery Voltage (V)','Irrigation Usage Total (L)'];
+        return [
+            'Sensor ID',
+            'Device Name', 
+            'Recorded At',
+            'Ground Temp (°C)',
+            'Soil Moisture (%)',
+            'Water Height (cm)',
+            'Battery Voltage (V)',
+            'Irrigation Usage (L)',
+            'Status'
+        ];
     }
 }

@@ -635,13 +635,18 @@ class GenerateReport extends Page implements HasForms
                 ->select(
                     'id',
                     'tank_name',
+                    'device_id',
                     'zone_name',
                     'capacity_liters',
                     'current_volume_liters',
                     'percentage',
                     'status',
                     'area_name',
+                    'area_size_sqm',
                     'plant_types',
+                    'height_cm',
+                    'last_height_cm',
+                    'max_daily_usage',
                     'created_at'
                 );
 
@@ -769,13 +774,14 @@ class GenerateReport extends Page implements HasForms
                 ->join('devices', 'sensor_data.device_id', '=', 'devices.id')
                 ->select(
                     'sensor_data.id',
-                    'devices.name as device_name',
-                    'sensor_data.ground_temp_c',
-                    'sensor_data.air_temp_c',
-                    'sensor_data.air_humidity_pct',
+                    'devices.device_name',
+                    'sensor_data.ground_temperature_c',
                     'sensor_data.soil_moisture_pct',
+                    'sensor_data.water_height_cm',
                     'sensor_data.battery_voltage_v',
-                    'sensor_data.recorded_at'
+                    'sensor_data.irrigation_usage_total_l',
+                    'sensor_data.recorded_at',
+                    'sensor_data.status'
                 );
 
             // Apply period filtering
@@ -810,12 +816,18 @@ class GenerateReport extends Page implements HasForms
 
             return Excel::download(new \App\Exports\SensorDataExport($sensorData), $filename);
         } catch (\Exception $e) {
-            Log::error('Sensor Data Excel export failed', ['error' => $e->getMessage()]);
+            Log::error('Sensor Data Excel export failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'period' => $this->sensorDataExportPeriod
+            ]);
             Notification::make()
                 ->title('Export Failed')
-                ->body('Unable to export sensor data to Excel.')
+                ->body('Unable to export sensor data to Excel: ' . $e->getMessage())
                 ->danger()
                 ->send();
+            
+            return null;
         }
     }
 
@@ -826,13 +838,14 @@ class GenerateReport extends Page implements HasForms
                 ->join('devices', 'sensor_data.device_id', '=', 'devices.id')
                 ->select(
                     'sensor_data.id',
-                    'devices.name as device_name',
-                    'sensor_data.ground_temp_c',
-                    'sensor_data.air_temp_c',
-                    'sensor_data.air_humidity_pct',
+                    'devices.device_name',
+                    'sensor_data.ground_temperature_c',
                     'sensor_data.soil_moisture_pct',
+                    'sensor_data.water_height_cm',
                     'sensor_data.battery_voltage_v',
-                    'sensor_data.recorded_at'
+                    'sensor_data.irrigation_usage_total_l',
+                    'sensor_data.recorded_at',
+                    'sensor_data.status'
                 );
 
             // Apply period filtering

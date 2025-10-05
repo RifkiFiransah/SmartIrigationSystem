@@ -101,12 +101,12 @@
                 <tr>
                     <th style="width: 8%">ID</th>
                     <th style="width: 15%">Device</th>
-                    <th style="width: 10%">Ground Temp (°C)</th>
-                    <th style="width: 10%">Air Temp (°C)</th>
-                    <th style="width: 10%">Air Humidity (%)</th>
+                    <th style="width: 12%">Ground Temp (°C)</th>
                     <th style="width: 12%">Soil Moisture (%)</th>
+                    <th style="width: 12%">Water Height (cm)</th>
                     <th style="width: 10%">Battery (V)</th>
-                    <th style="width: 25%">Recorded At</th>
+                    <th style="width: 12%">Usage (L)</th>
+                    <th style="width: 19%">Recorded At</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,11 +114,11 @@
                     <tr>
                         <td>{{ $data->id }}</td>
                         <td><strong>{{ $data->device_name }}</strong></td>
-                        <td class="text-right">{{ $data->ground_temp_c ? number_format($data->ground_temp_c, 1) : '-' }}</td>
-                        <td class="text-right">{{ $data->air_temp_c ? number_format($data->air_temp_c, 1) : '-' }}</td>
-                        <td class="text-right">{{ $data->air_humidity_pct ? number_format($data->air_humidity_pct, 1) : '-' }}</td>
+                        <td class="text-right">{{ $data->ground_temperature_c ? number_format($data->ground_temperature_c, 1) : '-' }}</td>
                         <td class="text-right">{{ $data->soil_moisture_pct ? number_format($data->soil_moisture_pct, 1) : '-' }}</td>
+                        <td class="text-right">{{ $data->water_height_cm ? number_format($data->water_height_cm, 1) : '-' }}</td>
                         <td class="text-right">{{ $data->battery_voltage_v ? number_format($data->battery_voltage_v, 2) : '-' }}</td>
+                        <td class="text-right">{{ $data->irrigation_usage_total_l ? number_format($data->irrigation_usage_total_l, 2) : '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($data->recorded_at)->format('d/m/Y H:i:s') }}</td>
                     </tr>
                 @endforeach

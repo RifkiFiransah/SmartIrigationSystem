@@ -9,32 +9,19 @@
     <meta http-equiv="Permissions-Policy"
         content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <title>Irigasi Pintar</title>
-    
-    <!-- Favicon -->
+    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
     @if (app()->environment('production'))
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <script src="{{ asset('js/app.js') }}"></script>
         <link rel="icon" type="image/png" href="images/agrinexlogo.jpg" />
         <link rel="apple-touch-icon" href="images/agrinexlogo.jpg" />
     @else
         <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
         <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
-    
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Suppress Tailwind CDN warning in development
-        tailwind.config = {
-            theme: {
-                extend: {}
-            }
-        }
-    </script>
-    
-    <!-- Chart.js via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
-    <!-- Alpine.js via CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Leaflet for interactive map (no API key needed) -->
     <!-- Correct Leaflet SRI hashes (official) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -304,11 +291,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     <h1 class="text-lg font-semibold text-green-700 leading-tight">Irigasi Pintar</h1>
                     <p class="text-xs text-gray-600 -mt-0.5">Monitoring & otomasi penyiraman</p>
                 </div>
-                {{-- <template x-if="fetchError">
+                <template x-if="fetchError">
                     <span
                         class="ml-2 text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
                         x-text="'OFFLINE'" title="Gagal mengambil data terakhir"></span>
-                </template> --}}
+                </template>
             </div>
             <div class="flex items-center gap-2">
                 <button @click="loadAll(true)" class="btn btn-ghost"
@@ -814,7 +801,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         <div class="card relative group cursor-pointer hover:shadow-lg transition"
                             @click="openDeviceModal(d)" title="Klik untuk detail device">
                             <!-- Status badges di kanan atas -->
-                            <div class="absolute left-2 top-2 flex flex-col-3 gap-1 items-end z-10 max-w-[120px] mb-20">
+                            <div class="absolute right-2 top-2 flex flex-col-3 gap-1.5 items-end z-10 max-w-[120px] mb-10">
                                 <!-- Status sensor (kritis/normal) -->
                                 <div class="text-[10px] px-2.5 py-1 rounded-full border font-medium shadow-sm whitespace-nowrap backdrop-blur-sm"
                                     :class="statusShort(d.status) === 'kritis' ? 'bg-red-100/90 text-red-700 border-red-200' :
@@ -834,8 +821,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     <span x-text="d.valve_state === 'open' ? '🟢 Open' : '⚪ Closed'"></span>
                                 </div>
                             </div>
-                            <div class="mb-5 mt-8 flex items-center justify-between">
-                                <h3 class="font-semibold text-sm text-gray-900 truncate" x-text="d.device_name">
+                            <div class="mb-3 mt-5 flex items-center justify-between pr-28">
+                                <h3 class="font-semibold text-sm text-gray-900 truncate pr-6" x-text="d.device_name">
                                 </h3>
                                 <span class="text-[10px] text-gray-400" x-text="timeAgo(d.recorded_at)"></span>
                             </div>
@@ -1518,13 +1505,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     const m = this.metricBy(key);
                     if (!m) return;
                     if (val == null || isNaN(parseFloat(val))) return; // ignore invalid
-                    
-                    const newValue = parseFloat(val);
-                    
-                    // Prevent unnecessary updates that trigger reactivity
-                    if (m.value === newValue && m.desc === desc) return;
-                    
-                    m.value = newValue;
+                    m.value = parseFloat(val);
                     if (m.type === 'plain') {
                         m.display = m.value.toFixed(0); // just integer count
                     } else {
@@ -1640,87 +1621,21 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         if (tVals.length) temp = tVals.reduce((a, b) => a + b, 0) / tVals.length;
                     }
                     if (temp != null && temp !== '-') this.updateMetric('temp', parseFloat(temp), 'now');
-                    
                     // Humidity
                     const hum = this.weatherSummary?.humidity;
                     if (hum != null && hum !== '-') this.updateMetric('humidity', parseFloat(hum), 'BMKG');
-                    
-                    // Light - Multiple fallback strategies
-                    let light = null;
-                    let lightSource = 'estimasi';
-                    
-                    // Priority 1: From weather summary
-                    if (this.weatherSummary?.light_pct != null) {
-                        light = parseFloat(this.weatherSummary.light_pct);
-                        lightSource = 'BMKG';
-                    }
-                    // Priority 2: Calculate from cloud cover (tcc)
-                    else if (this.weatherSummary?.tcc != null) {
-                        const tcc = parseFloat(this.weatherSummary.tcc);
-                        if (!isNaN(tcc)) {
-                            light = Math.max(0, Math.min(100, 100 - tcc));
-                            lightSource = 'cloud';
-                        }
-                    }
-                    // Priority 3: From device sensors
-                    else if (this.devices.length) {
-                        const luxVals = this.devices.map(d => d.light_lux).filter(v => v != null && v > 0);
-                        if (luxVals.length) {
-                            const avgLux = luxVals.reduce((a, b) => a + b, 0) / luxVals.length;
-                            light = Math.min(100, (avgLux / 12000) * 100);
-                            lightSource = 'sensor';
-                        }
-                    }
-                    
-                    // Priority 4: Time-based estimation
-                    if (light == null) {
-                        const hour = new Date().getHours();
-                        if (hour >= 6 && hour <= 18) {
-                            const progress = (hour - 6) / 12;
-                            light = Math.sin(progress * Math.PI) * 75 + 25;
-                        } else {
-                            light = 5;
-                        }
-                        lightSource = 'waktu';
-                    }
-                    
-                    if (light != null) this.updateMetric('light', Math.round(light), lightSource);
-                    
+                    // Light
+                    const light = this.weatherSummary?.light_pct;
+                    if (light != null) this.updateMetric('light', parseFloat(light), 'estimasi');
                     // Wind
                     const ws = this.weatherSummary?.wind_speed;
-                    if (ws != null && ws !== '-') {
-                        this.updateMetric('wind', parseFloat(ws), this.weatherSummary?.wind_dir || '');
-                    }
-                    
-                    // Rain - Multiple sources with fallback
-                    let rain = null;
-                    let rainDesc = 'tidak ada';
-                    
-                    // Priority 1: From weather summary
-                    if (this.weatherSummary?.rain != null) {
-                        rain = parseFloat(this.weatherSummary.rain);
-                    }
-                    // Priority 2: From first forecast entry
-                    else if (this.forecastEntries && this.forecastEntries.length > 0) {
-                        const firstForecast = this.forecastEntries[0];
-                        if (firstForecast?.rain != null) {
-                            rain = parseFloat(firstForecast.rain);
-                        }
-                    }
-                    
-                    // Default to 0 if no data (means no rain)
-                    if (rain == null) rain = 0;
-                    
-                    // Set description
-                    if (rain > 0) {
-                        rainDesc = rain > 5 ? 'lebat' : 'ringan';
-                    }
-                    
-                    this.updateMetric('rain', rain, rainDesc);
-                    
+                    if (ws != null && ws !== '-') this.updateMetric('wind', parseFloat(ws), this.weatherSummary?.wind_dir ||
+                        '');
+                    // Rain
+                    if (this.weatherSummary?.rain != null) this.updateMetric('rain', parseFloat(this.weatherSummary.rain),
+                        'current');
                     // Tank
                     if (this.tank?.percentage != null) this.updateMetric('tank', parseFloat(this.tank.percentage), 'level');
-                    
                     // Battery average
                     if (this.devices.length) {
                         const pcts = this.devices.map(d => {
@@ -1734,12 +1649,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             this.updateMetric('battery', avg, pcts.length + ' node');
                         }
                     }
-                    
                     // Devices count
                     this.updateMetric('devices', this.devices.length, 'online');
-                    
                     // After metrics update ensure tooltips dataset refreshed
                     this.refreshMetricTooltips();
+                    // Update environmental charts with latest data
+                    this.updateEnvironmentalCharts();
                 },
                 // Environmental Charts Methods
                 generateSampleChartData() {
@@ -2480,7 +2395,6 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadDevices() {
                     this.loadingDevices = true;
-                    this.fetchError = false;
                     try {
                         const r = await fetch('/api/sensor-readings/latest-per-device');
                         const j = await r.json();
@@ -2681,28 +2595,15 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     if (this.loadingAll && !force) return;
                     this.loadingAll = true;
                     this.fetchError = false;
-                    
-                    try {
-                        await Promise.all([
-                            this.loadDevices(),
-                            this.loadTank(),
-                            this.loadPlan(),
-                            this.loadUsage(),
-                            this.loadUsageDaily()
-                        ]);
-                        
-                        // After core data loaded, derive light & wind and fetch weather
-                        this.computeLightWindFromDevices();
-                        this.loadEnvStats();
-                        this.lastUpdated = new Date();
-                        this.computeTopMetrics();
-                        this.updateEnvironmentalCharts();
-                    } catch (error) {
-                        console.error('Load all error:', error);
-                        this.fetchError = true;
-                    } finally {
-                        this.loadingAll = false;
-                    }
+                    await Promise.all([this.loadDevices(), this.loadTank(), this.loadPlan(), this.loadUsage(), this
+                        .loadUsageDaily()
+                    ]);
+                    // After core data loaded, derive light & wind and fetch weather
+                    this.computeLightWindFromDevices();
+                    this.loadEnvStats();
+                    this.lastUpdated = new Date();
+                    this.computeTopMetrics();
+                    this.loadingAll = false;
                 },
                 computeLightWindFromDevices() {
                     if (!this.devices.length) return;
@@ -2816,31 +2717,14 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         const todayEntries = this.forecastEntries.filter(e => e.local_datetime.startsWith(today));
                         const temps = todayEntries.map(e => e.temp).filter(v => v != null);
                         const first = this.forecastEntries[0];
-                        
-                        // Calculate light_pct with fallback
-                        let lightPct = null;
-                        if (first?.tcc != null) {
-                            lightPct = Math.max(0, Math.min(100, 100 - first.tcc));
-                        } else {
-                            // Time-based fallback
-                            const hour = new Date().getHours();
-                            if (hour >= 6 && hour <= 18) {
-                                const progress = (hour - 6) / 12;
-                                lightPct = Math.sin(progress * Math.PI) * 75 + 25;
-                            } else {
-                                lightPct = 5;
-                            }
-                        }
-                        
                         this.weatherSummary = {
                             temp: first?.temp ?? '-',
                             label: first?.label || '-',
                             humidity: first?.humidity ?? '-',
                             wind_speed: first?.wind_speed ?? '-',
                             wind_dir: first?.wind_dir ?? '',
-                            rain: first?.rain ?? 0,
-                            light_pct: lightPct,
-                            tcc: first?.tcc,
+                            rain: first?.rain ?? null,
+                            light_pct: first?.tcc != null ? Math.max(0, Math.min(100, 100 - first.tcc)) : null,
                             icon: first?.icon || null,
                             time: first?.local_datetime ? new Date(first.local_datetime).toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
@@ -2849,12 +2733,6 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             temp_min: temps.length ? Math.min(...temps) : null,
                             temp_max: temps.length ? Math.max(...temps) : null
                         };
-                        
-                        console.log('Weather summary built:', {
-                            temp: this.weatherSummary.temp,
-                            rain: this.weatherSummary.rain,
-                            light_pct: this.weatherSummary.light_pct
-                        });
                     }
                     this.buildCalendar();
                     this.buildWeekView();
@@ -3436,29 +3314,14 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     return st === 'completed' ? 'text-green-600' : st === 'pending' ? 'text-gray-500' : 'text-yellow-600';
                 },
                 init() {
-                    // Initialize charts first
-                    setTimeout(() => {
-                        this.initEnvironmentalCharts();
-                    }, 500);
-                    
-                    // Initialize leaflet
-                    setTimeout(() => this.initLeaflet(), 800);
-                    
-                    // Load data after charts ready
-                    setTimeout(() => {
-                        this.loadAll();
-                    }, 1200);
-                    
-                    // Auto refresh setiap 60 detik - hanya jika tidak sedang loading
-                    setInterval(() => {
-                        if (!this.loadingAll) {
-                            this.loadAll();
-                        }
-                    }, 60000);
-                    
-                    // Clock tick
+                    this.loadAll();
+                    setInterval(() => this.loadAll(), 60000);
                     this.tickClock();
                     setInterval(() => this.tickClock(), 1000);
+                    // initialize leaflet after slight delay for layout stability
+                    setTimeout(() => this.initLeaflet(), 800);
+                    // Initialize environmental charts
+                    setTimeout(() => this.initEnvironmentalCharts(), 1000);
                 },
                 tickClock() {
                     const now = new Date();

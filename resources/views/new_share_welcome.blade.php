@@ -304,11 +304,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     <h1 class="text-lg font-semibold text-green-700 leading-tight">Irigasi Pintar</h1>
                     <p class="text-xs text-gray-600 -mt-0.5">Monitoring & otomasi penyiraman</p>
                 </div>
-                {{-- <template x-if="fetchError">
+                <template x-if="fetchError">
                     <span
                         class="ml-2 text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
                         x-text="'OFFLINE'" title="Gagal mengambil data terakhir"></span>
-                </template> --}}
+                </template>
             </div>
             <div class="flex items-center gap-2">
                 <button @click="loadAll(true)" class="btn btn-ghost"
@@ -1738,8 +1738,20 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     // Devices count
                     this.updateMetric('devices', this.devices.length, 'online');
                     
+                    // Debug log
+                    console.log('Metrics computed:', {
+                        light: light,
+                        lightSource: lightSource,
+                        rain: rain,
+                        rainDesc: rainDesc,
+                        hasWeatherSummary: !!this.weatherSummary,
+                        forecastCount: this.forecastEntries?.length || 0
+                    });
+                    
                     // After metrics update ensure tooltips dataset refreshed
                     this.refreshMetricTooltips();
+                    // Update environmental charts with latest data
+                    this.updateEnvironmentalCharts();
                 },
                 // Environmental Charts Methods
                 generateSampleChartData() {
@@ -2480,7 +2492,6 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadDevices() {
                     this.loadingDevices = true;
-                    this.fetchError = false;
                     try {
                         const r = await fetch('/api/sensor-readings/latest-per-device');
                         const j = await r.json();
@@ -2681,28 +2692,15 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     if (this.loadingAll && !force) return;
                     this.loadingAll = true;
                     this.fetchError = false;
-                    
-                    try {
-                        await Promise.all([
-                            this.loadDevices(),
-                            this.loadTank(),
-                            this.loadPlan(),
-                            this.loadUsage(),
-                            this.loadUsageDaily()
-                        ]);
-                        
-                        // After core data loaded, derive light & wind and fetch weather
-                        this.computeLightWindFromDevices();
-                        this.loadEnvStats();
-                        this.lastUpdated = new Date();
-                        this.computeTopMetrics();
-                        this.updateEnvironmentalCharts();
-                    } catch (error) {
-                        console.error('Load all error:', error);
-                        this.fetchError = true;
-                    } finally {
-                        this.loadingAll = false;
-                    }
+                    await Promise.all([this.loadDevices(), this.loadTank(), this.loadPlan(), this.loadUsage(), this
+                        .loadUsageDaily()
+                    ]);
+                    // After core data loaded, derive light & wind and fetch weather
+                    this.computeLightWindFromDevices();
+                    this.loadEnvStats();
+                    this.lastUpdated = new Date();
+                    this.computeTopMetrics();
+                    this.loadingAll = false;
                 },
                 computeLightWindFromDevices() {
                     if (!this.devices.length) return;
@@ -2850,11 +2848,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             temp_max: temps.length ? Math.max(...temps) : null
                         };
                         
-                        console.log('Weather summary built:', {
-                            temp: this.weatherSummary.temp,
-                            rain: this.weatherSummary.rain,
-                            light_pct: this.weatherSummary.light_pct
-                        });
+                        console.log('Weather summary built:', this.weatherSummary);
                     }
                     this.buildCalendar();
                     this.buildWeekView();
