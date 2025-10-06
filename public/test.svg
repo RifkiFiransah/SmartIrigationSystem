@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#16a34a" rx="64"/>
+  
+  <!-- Water Drop Icon -->
+  <g transform="translate(256, 256)">
+    <!-- Main Drop -->
+    <path d="M 0,-120 C -40,-80 -80,-40 -80,20 C -80,75 -45,110 0,110 C 45,110 80,75 80,20 C 80,-40 40,-80 0,-120 Z" 
+          fill="#ffffff" opacity="0.95"/>
+    
+    <!-- Inner Highlight -->
+    <ellipse cx="-25" cy="10" rx="20" ry="35" fill="#ffffff" opacity="0.3"/>
+    
+    <!-- Leaf Element -->
+    <path d="M -20,-60 Q -50,-50 -55,-20 Q -50,-30 -40,-35 Q -35,-45 -25,-55 Z" 
+          fill="#84cc16" opacity="0.8"/>
+  </g>
+  
+  <!-- Text (optional) -->
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="48" font-weight="bold" 
+        text-anchor="middle" fill="#ffffff" opacity="0.9">AGRINEX</text>
+</svg>

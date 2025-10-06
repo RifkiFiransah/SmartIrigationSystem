@@ -10,6 +10,18 @@
         content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
     <title>Irigasi Pintar</title>
     
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Smart Irrigation">
+    <meta name="application-name" content="Smart Irrigation">
+    <meta name="msapplication-TileColor" content="#16a34a">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    
     <!-- Favicon -->
     @if (app()->environment('production'))
         <link rel="icon" type="image/png" href="images/agrinexlogo.jpg" />
@@ -17,6 +29,15 @@
     @else
         <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
         <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="144x144" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="114x114" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="72x72" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="60x60" href="{{ asset('AgrinexLogo.jpg') }}" />
+        <link rel="apple-touch-icon" sizes="57x57" href="{{ asset('AgrinexLogo.jpg') }}" />
     @endif
     
     <!-- Tailwind CSS via CDN -->
@@ -285,6 +306,59 @@
         .chart-legend-item:hover {
             transform: translateX(2px);
         }
+
+        /* PWA Specific Styles */
+        [x-cloak] {
+            display: none !important;
+        }
+
+        /* PWA Installed Mode */
+        body.pwa-installed {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Install Prompt Animation */
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Splash screen simulation (iOS) */
+        @media (display-mode: standalone) {
+            body {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                user-select: none;
+            }
+        }
+
+        /* Pull to refresh indicator */
+        .pull-to-refresh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #16a34a;
+            color: white;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+        }
+
+        .pull-to-refresh.active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 
@@ -301,8 +375,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         class="h-9 w-9 rounded-md object-cover border border-green-200 shadow-sm" loading="lazy">
                 @endif
                 <div>
-                    <h1 class="text-lg font-semibold text-green-700 leading-tight">Irigasi Pintar</h1>
-                    <p class="text-xs text-gray-600 -mt-0.5">Monitoring & otomasi penyiraman</p>
+                    <h1 class="text-lg font-semibold text-green-700 leading-tight" x-text="t('appTitle')">Irigasi Pintar</h1>
+                    <p class="text-xs text-gray-600 -mt-0.5" x-text="t('appSubtitle')">Monitoring & otomasi penyiraman</p>
                 </div>
                 {{-- <template x-if="fetchError">
                     <span
@@ -311,16 +385,30 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 </template> --}}
             </div>
             <div class="flex items-center gap-2">
+                <!-- PWA Install Button (Debug) -->
+                <button @click="window.testPWAInstall ? testPWAInstall() : console.log('testPWAInstall not loaded')" 
+                    class="btn btn-ghost text-green-600 hover:bg-green-50 hidden sm:flex items-center gap-1.5"
+                    title="Test PWA Install (Ctrl+Shift+P)">
+                    <span class="text-base">📱</span>
+                    <span class="text-xs font-semibold">PWA</span>
+                </button>
+                
+                <!-- Language Toggle -->
+                <button @click="toggleLanguage()" class="btn btn-ghost flex items-center gap-1.5" :title="t('switchLang')">
+                    <span class="text-base" x-html="currentLang === 'id' ? '🇮🇩' : '🇬🇧'"></span>
+                    <span class="text-xs font-semibold uppercase" x-text="currentLang === 'id' ? 'ID' : 'EN'"></span>
+                </button>
+                
                 <button @click="loadAll(true)" class="btn btn-ghost"
                     :class="loadingAll ? 'opacity-60 pointer-events-none' : ''">
                     <span x-show="!loadingAll">🔄</span>
                     <span x-show="loadingAll" class="animate-spin">⏳</span>
-                    <span class="hidden sm:inline" x-text="loadingAll ? 'Memuat' : 'Refresh'"></span>
+                    <span class="hidden sm:inline" x-text="loadingAll ? t('loading') : t('refresh')"></span>
                 </button>
                 @auth
-                    <a href="/admin" class="btn bg-green-600 hover:bg-green-700 text-white">Admin</a>
+                    <a href="/admin" class="btn bg-green-600 hover:bg-green-700 text-white" x-text="t('admin')">Admin</a>
                 @else
-                    <a href="/admin/login" class="btn btn-ghost">Masuk</a>
+                    <a href="/admin/login" class="btn btn-ghost" x-text="t('login')">Masuk</a>
                 @endauth
             </div>
         </div>
@@ -334,7 +422,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 <div class="flex flex-col space-y-4">
                     <!-- Waktu Sekarang -->
                     <div class="flex flex-col">
-                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Waktu Sekarang
+                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2" x-text="t('currentTime')">Waktu Sekarang
                         </div>
                         <div class="flex items-end gap-2">
                             <div class="text-4xl font-bold text-gray-800 tabular-nums" x-text="clock.time"></div>
@@ -344,19 +432,19 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
 
                     <!-- Tanggal Hari Ini -->
                     <div class="flex flex-col">
-                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Tanggal Hari Ini
+                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2" x-text="t('currentDate')">Tanggal Hari Ini
                         </div>
                         <div class="grid grid-cols-3 gap-3 text-center">
                             <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Tanggal</div>
+                                <div class="text-xs font-semibold text-gray-600 mb-1" x-text="t('day')">Tanggal</div>
                                 <div class="text-2xl font-bold text-gray-800" x-text="clock.day"></div>
                             </div>
                             <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Bulan</div>
+                                <div class="text-xs font-semibold text-gray-600 mb-1" x-text="t('month')">Bulan</div>
                                 <div class="text-2xl font-bold text-gray-800" x-text="clock.month"></div>
                             </div>
                             <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Tahun</div>
+                                <div class="text-xs font-semibold text-gray-600 mb-1" x-text="t('year')">Tahun</div>
                                 <div class="text-2xl font-bold text-gray-800" x-text="clock.year"></div>
                             </div>
                         </div>
@@ -370,7 +458,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             loading="lazy" />
                     </template>
                     <div>
-                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cuaca Saat Ini
+                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1" x-text="t('currentWeather')">Cuaca Saat Ini
                         </div>
                         <div class="text-5xl font-bold leading-none text-gray-800 tabular-nums mb-1"
                             x-text="weatherSummary ? (weatherSummary.temp+'°C') : '-' "></div>
@@ -400,16 +488,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 <div class="flex flex-col space-y-4">
                     <!-- Header Prakiraan -->
                     <div class="flex items-center justify-between">
-                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Prakiraan</div>
+                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider" x-text="t('forecast')">Prakiraan</div>
                         <div class="flex bg-gray-100 rounded-lg overflow-hidden text-xs">
                             <button type="button" class="px-4 py-2 focus:outline-none transition"
                                 :class="forecastView === '24h' ? 'bg-green-600 text-white shadow' :
                                     'text-gray-600 hover:bg-gray-200'"
-                                @click="forecastView='24h'">24 Jam</button>
+                                @click="forecastView='24h'" x-text="t('next24h')">24 Jam</button>
                             <button type="button" class="px-4 py-2 focus:outline-none transition"
                                 :class="forecastView === 'weekly' ? 'bg-green-600 text-white shadow' :
                                     'text-gray-600 hover:bg-gray-200'"
-                                @click="forecastView='weekly'">Minggu</button>
+                                @click="forecastView='weekly'" x-text="t('next7d')">Minggu</button>
                         </div>
                     </div>
 
@@ -460,11 +548,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <!-- Current Tasks -->
             <div class="card flex flex-col gap-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-800">Aktivitas / Peringatan</h3>
+                    <h3 class="font-semibold text-gray-800" x-text="t('activities')">Aktivitas / Peringatan</h3>
                     <button class="text-gray-400 hover:text-gray-600 text-xs" @click="refreshTasks()">↻</button>
                 </div>
                 <template x-if="!currentTasks.length">
-                    <div class="text-xs text-gray-500">Tidak ada aktivitas.</div>
+                    <div class="text-xs text-gray-500" x-text="t('noTasks')">Tidak ada aktivitas.</div>
                 </template>
                 <div class="space-y-3">
                     <template x-for="t in currentTasks" :key="t.id">
@@ -488,12 +576,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <!-- Upcoming Week -->
             <div class="card flex flex-col gap-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-800">Minggu Ini</h3>
+                    <h3 class="font-semibold text-gray-800" x-text="t('upcomingWeek')">Minggu Ini</h3>
                     <div class="flex gap-1">
                         <button class="px-2 py-1 text-[10px] rounded bg-gray-100 hover:bg-gray-200"
-                            @click="shiftWeek(-1)">◀</button>
+                            @click="shiftWeek(-1)" x-text="t('prevWeek')">◀</button>
                         <button class="px-2 py-1 text-[10px] rounded bg-gray-100 hover:bg-gray-200"
-                            @click="shiftWeek(1)">▶</button>
+                            @click="shiftWeek(1)" x-text="t('nextWeek')">▶</button>
                     </div>
                 </div>
                 <div class="flex justify-between text-[11px] font-semibold text-green-800 px-1">
@@ -538,7 +626,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Light Intensity</h3>
+                        <h3 class="text-gray-900 text-xl font-bold" x-text="t('lightIntensity')">Light Intensity</h3>
                         <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
                             x-text="lightIntensityData.labels.length > 0 ? (lightIntensityData.labels.length + ' points') : 'No data'">
                         </span>
@@ -566,7 +654,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Water Level</h3>
+                        <h3 class="text-gray-900 text-xl font-bold" x-text="t('waterLevel')">Water Level</h3>
                         <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700" 
                             x-text="waterLevelData.labels.length > 0 ? (waterLevelData.labels.length + ' points') : 'No data'">
                         </span>
@@ -593,7 +681,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Soil Moisture</h3>
+                        <h3 class="text-gray-900 text-xl font-bold" x-text="t('soilMoisture')">Soil Moisture</h3>
                         <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
                             x-text="soilMoistureData.labels.length > 0 ? (soilMoistureData.labels.length + ' points') : 'No data'">
                         </span>
@@ -621,7 +709,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
                     <div class="mb-4">
                         <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-gray-900 text-xl font-bold">Temperature</h3>
+                            <h3 class="text-gray-900 text-xl font-bold" x-text="t('temperature')">Temperature</h3>
                             <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700" 
                                 x-text="temperatureData.labels.length > 0 ? (temperatureData.labels.length + ' points') : 'No data'">
                             </span>
@@ -649,7 +737,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
                     <div class="mb-4">
                         <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-gray-900 text-xl font-bold">Humidity</h3>
+                            <h3 class="text-gray-900 text-xl font-bold" x-text="t('airHumidity')">Humidity</h3>
                             <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
                                 x-text="humidityData.labels.length > 0 ? (humidityData.labels.length + ' points') : 'No data'">
                             </span>
@@ -678,7 +766,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
         <!-- Top Metrics (Gauge / Linear Cards) -->
         <section>
             <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-600 uppercase">Ringkasan Lingkungan</h2>
+                <h2 class="text-sm font-semibold tracking-wide text-gray-600 uppercase" x-text="t('environmentSummary')">Ringkasan Lingkungan</h2>
                 <div class="text-[10px] text-gray-500"
                     x-text="lastUpdated ? ('Update: '+ lastUpdated.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})) : ''">
                 </div>
@@ -804,9 +892,9 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             <!-- Devices -->
             <div class="lg:col-span-2 space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                    <h2 class="font-semibold text-lg text-gray-900">Pembacaan Perangkat Terbaru</h2>
+                    <h2 class="font-semibold text-lg text-gray-900" x-text="t('devices')">Pembacaan Perangkat Terbaru</h2>
                     <button @click="loadAll()"
-                        class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all">Refresh</button>
+                        class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all" x-text="t('refresh')">Refresh</button>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
                     x-show="devices.length">
@@ -877,7 +965,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         </div>
                     </template>
                 </div>
-                <div x-show="!devices.length && !loadingDevices" class="text-sm text-gray-600">Tidak ada data
+                <div x-show="!devices.length && !loadingDevices" class="text-sm text-gray-600" x-text="t('noDevices')">Tidak ada data
                     perangkat.
                 </div>
                 <div x-show="loadingDevices" class="flex gap-3">
@@ -897,7 +985,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
 
             <!-- Tank -->
             <div class="space-y-4">
-                <h2 class="font-semibold text-lg text-gray-900">Tangki Air</h2>
+                <h2 class="font-semibold text-lg text-gray-900" x-text="t('waterTank')">Tangki Air</h2>
                 <div class="card" x-show="tank.id">
                     <h3 class="font-semibold text-gray-900" x-text="tank.tank_name"></h3>
                     <div class="mt-3 flex gap-6 items-stretch">
@@ -978,17 +1066,17 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
         <!-- Usage Chart - 2 Cards Side by Side -->
         <section class="space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <h2 class="font-semibold text-lg text-gray-900">Riwayat Penggunaan Air</h2>
+                <h2 class="font-semibold text-lg text-gray-900" x-text="t('waterUsageHistory')">Riwayat Penggunaan Air</h2>
                 <button @click="loadUsage(); loadUsageDaily()"
-                    class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all">Refresh</button>
+                    class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all" x-text="t('refresh')">Refresh</button>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Card Kiri: 30 Hari -->
                 <div class="card flex flex-col">
                     <div class="mb-4">
-                        <h3 class="text-base font-semibold text-gray-800 mb-1">Penggunaan 30 Hari Terakhir</h3>
-                        <p class="text-xs text-gray-600">Data harian dalam 30 hari terakhir</p>
+                        <h3 class="text-base font-semibold text-gray-800 mb-1" x-text="t('last30Days')">Penggunaan 30 Hari Terakhir</h3>
+                        <p class="text-xs text-gray-600" x-text="t('dailyData30')">Data harian dalam 30 hari terakhir</p>
                     </div>
                     <div class="flex-1 flex items-center justify-center" style="height: 140px;">
                         <canvas id="usageChart30d" width="100%" height="140"></canvas>
@@ -1010,8 +1098,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 <!-- Card Kanan: 24 Jam -->
                 <div class="card flex flex-col">
                     <div class="mb-4">
-                        <h3 class="text-base font-semibold text-gray-800 mb-1">Penggunaan 24 Jam Terakhir</h3>
-                        <p class="text-xs text-gray-600">Data per jam dalam 24 jam terakhir</p>
+                        <h3 class="text-base font-semibold text-gray-800 mb-1" x-text="t('last24Hours')">Penggunaan 24 Jam Terakhir</h3>
+                        <p class="text-xs text-gray-600" x-text="t('hourlyData24')">Data per jam dalam 24 jam terakhir</p>
                     </div>
                     <div class="flex-1 flex items-center justify-center" style="height: 140px;">
                         <canvas id="usageChart24h" width="100%" height="140"></canvas>
@@ -1089,6 +1177,66 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
     </main>
 
     <footer class="text-center py-6 text-xs text-gray-500">&copy; {{ date('Y') }} Smart Irrigation</footer>
+
+    <!-- PWA Install Prompt -->
+    <div x-data="pwaInstall()" x-show="showInstallPrompt" x-cloak
+        class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 animate-pop">
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📱</span>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-bold text-gray-900 text-sm mb-1">Install Aplikasi</h3>
+                <p class="text-xs text-gray-600 mb-3">Install Smart Irrigation sebagai aplikasi di perangkat Anda untuk akses lebih cepat!</p>
+                <div class="flex gap-2">
+                    <button @click="installPWA()" 
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-2 px-4 rounded-lg transition">
+                        Install
+                    </button>
+                    <button @click="dismissInstall()" 
+                        class="px-4 py-2 text-xs text-gray-600 hover:text-gray-800 transition">
+                        Nanti
+                    </button>
+                </div>
+            </div>
+            <button @click="dismissInstall()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- PWA Update Available Banner -->
+    <div x-data="{ showUpdateBanner: false }" x-show="showUpdateBanner" x-cloak
+        class="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white rounded-xl shadow-2xl p-4 z-50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🔄</span>
+                <div>
+                    <p class="font-semibold text-sm">Update Tersedia!</p>
+                    <p class="text-xs opacity-90">Versi baru aplikasi sudah siap</p>
+                </div>
+            </div>
+            <button @click="location.reload()" 
+                class="bg-white text-blue-600 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-50 transition">
+                Update
+            </button>
+        </div>
+    </div>
+
+    <!-- Offline Indicator -->
+    <div x-data="{ isOffline: false }" 
+         @offline.window="isOffline = true" 
+         @online.window="isOffline = false"
+         x-show="isOffline" 
+         x-cloak
+         class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-white px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+        </svg>
+        <span class="text-sm font-semibold">Mode Offline - Menampilkan data cache</span>
+    </div>
 
     <!-- Device Detail Modal -->
     <div x-cloak x-show="showDeviceModal"
@@ -1218,7 +1366,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 </div>
             </div>
             <div class="px-5 py-3 bg-gray-50 border-t flex justify-end gap-2">
-                <button @click="closeDeviceModal()" class="btn btn-ghost text-xs">Tutup</button>
+                <button @click="closeDeviceModal()" class="btn btn-ghost text-xs" x-text="t('close')">Tutup</button>
             </div>
         </div>
     </div>
@@ -1226,6 +1374,202 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
     <script>
         function dashboard() {
             return {
+                // Language state
+                currentLang: localStorage.getItem('sis_lang') || 'id',
+                translations: {
+                    id: {
+                        // Header
+                        appTitle: 'Irigasi Pintar',
+                        appSubtitle: 'Monitoring & otomasi penyiraman',
+                        switchLang: 'Ganti ke Bahasa Inggris',
+                        refresh: 'Refresh',
+                        loading: 'Memuat',
+                        admin: 'Admin',
+                        login: 'Masuk',
+                        // Weather section
+                        currentTime: 'Waktu Sekarang',
+                        currentDate: 'Tanggal Hari Ini',
+                        currentWeather: 'Cuaca Saat Ini',
+                        forecast: 'Prakiraan',
+                        next24h: '24 Jam',
+                        next7d: 'Minggu',
+                        day: 'Tanggal',
+                        month: 'Bulan',
+                        year: 'Tahun',
+                        humidity: 'Kelembapan',
+                        windSpeed: 'Kecepatan Angin',
+                        pressure: 'Tekanan',
+                        lightPercent: 'cahaya',
+                        // Tasks
+                        activities: 'Aktivitas / Peringatan',
+                        weeklyTasks: 'Tugas Minggu Ini',
+                        upcomingWeek: 'Minggu Ini',
+                        noTasks: 'Tidak ada tugas terjadwal minggu ini',
+                        prevWeek: '‹ Minggu Lalu',
+                        nextWeek: 'Minggu Depan ›',
+                        today: 'Kini butuh',
+                        daysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+                        // Charts
+                        environmentSummary: 'Ringkasan Lingkungan',
+                        lightIntensity: 'Intensitas Cahaya',
+                        waterLevel: 'Ketinggian Air',
+                        soilMoisture: 'Kelembapan Tanah',
+                        temperature: 'Suhu',
+                        airHumidity: 'Kelembapan Udara',
+                        time: 'Waktu',
+                        // Metrics
+                        temp: 'Suhu',
+                        hum: 'Kelembapan Udara',
+                        soil: 'Kelembapan Tanah',
+                        light: 'Cahaya',
+                        rain: 'Hujan',
+                        water: 'Ketinggian Air',
+                        // Devices
+                        devices: 'Perangkat',
+                        allDevices: 'Semua Perangkat',
+                        noDevices: 'Tidak ada data perangkat',
+                        viewDetails: 'Detail',
+                        battery: 'Baterai',
+                        waterUsageToday: 'Pemakaian Hari Ini',
+                        lastUpdate: 'Terakhir',
+                        // Tank
+                        waterTank: 'Tangki Air',
+                        capacity: 'Kapasitas',
+                        currentLevel: 'Level Saat Ini',
+                        status: 'Status',
+                        lastUpdated: 'Terakhir Diperbarui',
+                        todaySchedule: 'Jadwal Hari Ini',
+                        noSchedule: 'Tidak ada jadwal',
+                        // Usage
+                        waterUsageHistory: 'Riwayat Penggunaan Air',
+                        last30Days: '30 Hari Terakhir',
+                        last24Hours: '24 Jam Terakhir',
+                        dailyData30: 'Data harian dalam 30 hari terakhir',
+                        hourlyData24: 'Data per jam dalam 24 jam terakhir',
+                        totalUsage: 'Total',
+                        avgUsage: 'Rata-rata',
+                        peakUsage: 'Puncak',
+                        lowUsage: 'Terendah',
+                        days: 'hari',
+                        noDataYet: 'Belum ada data',
+                        // Location
+                        location: 'Lokasi',
+                        streetView: 'Street View',
+                        villageMap: 'Peta Desa',
+                        close: 'Tutup',
+                        viewFullMap: 'Lihat Peta Lengkap',
+                        // Modal
+                        deviceDetails: 'Detail Perangkat',
+                        sessions: 'Sesi',
+                        usageHistory: 'Riwayat Pemakaian',
+                        noData: 'Tidak ada data',
+                        // Units
+                        celsius: '°C',
+                        percent: '%',
+                        lux: 'lux',
+                        mm: 'mm',
+                        cm: 'cm',
+                        liter: 'L',
+                        kmh: 'km/j',
+                        hPa: 'hPa'
+                    },
+                    en: {
+                        // Header
+                        appTitle: 'Smart Irrigation',
+                        appSubtitle: 'Monitoring & irrigation automation',
+                        switchLang: 'Switch to Indonesian',
+                        refresh: 'Refresh',
+                        loading: 'Loading',
+                        admin: 'Admin',
+                        login: 'Login',
+                        // Weather section
+                        currentTime: 'Current Time',
+                        currentDate: 'Today\'s Date',
+                        currentWeather: 'Current Weather',
+                        forecast: 'Forecast',
+                        next24h: '24 Hours',
+                        next7d: 'Week',
+                        day: 'Day',
+                        month: 'Month',
+                        year: 'Year',
+                        humidity: 'Humidity',
+                        windSpeed: 'Wind Speed',
+                        pressure: 'Pressure',
+                        lightPercent: 'light',
+                        // Tasks
+                        activities: 'Activities / Alerts',
+                        weeklyTasks: 'This Week\'s Tasks',
+                        upcomingWeek: 'This Week',
+                        noTasks: 'No scheduled tasks this week',
+                        prevWeek: '‹ Previous Week',
+                        nextWeek: 'Next Week ›',
+                        today: 'Today need',
+                        daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                        // Charts
+                        environmentSummary: 'Environmental Summary',
+                        lightIntensity: 'Light Intensity',
+                        waterLevel: 'Water Level',
+                        soilMoisture: 'Soil Moisture',
+                        temperature: 'Temperature',
+                        airHumidity: 'Air Humidity',
+                        time: 'Time',
+                        // Metrics
+                        temp: 'Temperature',
+                        hum: 'Air Humidity',
+                        soil: 'Soil Moisture',
+                        light: 'Light',
+                        rain: 'Rain',
+                        water: 'Water Level',
+                        // Devices
+                        devices: 'Devices',
+                        allDevices: 'All Devices',
+                        noDevices: 'No device data',
+                        viewDetails: 'Details',
+                        battery: 'Battery',
+                        waterUsageToday: 'Today\'s Usage',
+                        lastUpdate: 'Last',
+                        // Tank
+                        waterTank: 'Water Tank',
+                        capacity: 'Capacity',
+                        currentLevel: 'Current Level',
+                        status: 'Status',
+                        lastUpdated: 'Last Updated',
+                        todaySchedule: 'Today\'s Schedule',
+                        noSchedule: 'No schedule',
+                        // Usage
+                        waterUsageHistory: 'Water Usage History',
+                        last30Days: 'Last 30 Days',
+                        last24Hours: 'Last 24 Hours',
+                        dailyData30: 'Daily data for the last 30 days',
+                        hourlyData24: 'Hourly data for the last 24 hours',
+                        totalUsage: 'Total',
+                        avgUsage: 'Average',
+                        peakUsage: 'Peak',
+                        lowUsage: 'Lowest',
+                        days: 'days',
+                        noDataYet: 'No data yet',
+                        // Location
+                        location: 'Location',
+                        streetView: 'Street View',
+                        villageMap: 'Village Map',
+                        close: 'Close',
+                        viewFullMap: 'View Full Map',
+                        // Modal
+                        deviceDetails: 'Device Details',
+                        sessions: 'Sessions',
+                        usageHistory: 'Usage History',
+                        noData: 'No data',
+                        // Units
+                        celsius: '°C',
+                        percent: '%',
+                        lux: 'lux',
+                        mm: 'mm',
+                        cm: 'cm',
+                        liter: 'L',
+                        kmh: 'km/h',
+                        hPa: 'hPa'
+                    }
+                },
                 darkMode: localStorage.getItem('sis_dark') === '1',
                 loadingAll: false,
                 loadingDevices: false,
@@ -1482,6 +1826,52 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         document.documentElement.classList.add('dark');
                     } else {
                         document.documentElement.classList.remove('dark');
+                    }
+                },
+                // Language Methods
+                t(key) {
+                    return this.translations[this.currentLang][key] || key;
+                },
+                toggleLanguage() {
+                    this.currentLang = this.currentLang === 'id' ? 'en' : 'id';
+                    localStorage.setItem('sis_lang', this.currentLang);
+                    // Update page title
+                    document.title = this.t('appTitle');
+                    // Re-render charts with new language
+                    this.updateChartLanguage();
+                },
+                updateChartLanguage() {
+                    // Update chart axis labels
+                    if (this.lightIntensityChart) {
+                        this.lightIntensityChart.options.scales.x.title.text = this.t('time');
+                        this.lightIntensityChart.options.scales.y.title.text = `${this.t('lightIntensity')} (${this.t('lux')})`;
+                        this.lightIntensityChart.update('none');
+                    }
+                    if (this.waterLevelChart) {
+                        this.waterLevelChart.options.scales.x.title.text = this.t('time');
+                        this.waterLevelChart.options.scales.y.title.text = `${this.t('waterLevel')} (${this.t('cm')})`;
+                        this.waterLevelChart.update('none');
+                    }
+                    if (this.soilMoistureChart) {
+                        this.soilMoistureChart.options.scales.x.title.text = this.t('time');
+                        this.soilMoistureChart.options.scales.y.title.text = `${this.t('soilMoisture')} (${this.t('percent')})`;
+                        this.soilMoistureChart.update('none');
+                    }
+                    if (this.temperatureChart) {
+                        this.temperatureChart.options.scales.x.title.text = this.t('time');
+                        this.temperatureChart.options.scales.y.title.text = `${this.t('temperature')} (${this.t('celsius')})`;
+                        this.temperatureChart.update('none');
+                    }
+                    if (this.humidityChart) {
+                        this.humidityChart.options.scales.x.title.text = this.t('time');
+                        this.humidityChart.options.scales.y.title.text = `${this.t('airHumidity')} (${this.t('percent')})`;
+                        this.humidityChart.update('none');
+                    }
+                    if (this.usageChart) {
+                        this.usageChart.update('none');
+                    }
+                    if (this.usageChart24h) {
+                        this.usageChart24h.update('none');
                     }
                 },
                 // Location section (no dynamic state needed after refactor)
@@ -1908,7 +2298,7 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         display: true,
                                         title: {
                                             display: true,
-                                            text: 'Intensitas Cahaya (lux)',
+                                            text: this.t('lightIntensity') + ' (' + this.t('lux') + ')',
                                             color: '#374151',
                                             font: {
                                                 size: 12,
@@ -3389,16 +3779,30 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 fill: true,
                                 borderColor: '#16a34a',
                                 backgroundColor: 'rgba(22,163,74,0.15)',
-                                pointRadius: 2
+                                pointRadius: 2,
+                                pointBackgroundColor: '#16a34a',
+                                pointBorderColor: '#16a34a'
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            animation: false, // Disable animation to prevent loops
+                            animation: {
+                                duration: 0 // Completely disable animations to prevent circular refs
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
                             plugins: {
                                 legend: {
                                     display: false
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 8,
+                                    displayColors: false
                                 }
                             },
                             scales: {
@@ -3406,12 +3810,21 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     beginAtZero: true,
                                     grid: {
                                         display: true,
-                                        color: 'rgba(0,0,0,0.1)'
+                                        color: 'rgba(0,0,0,0.1)',
+                                        drawBorder: false
+                                    },
+                                    ticks: {
+                                        color: '#666'
                                     }
                                 },
                                 x: {
                                     grid: {
                                         display: false
+                                    },
+                                    ticks: {
+                                        color: '#666',
+                                        maxRotation: 45,
+                                        minRotation: 45
                                     }
                                 }
                             }
@@ -3584,6 +3997,439 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 }
             }
         }
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // PWA Install Prompt Handler
+        function pwaInstall() {
+            return {
+                showInstallPrompt: false,
+                deferredPrompt: null,
+                
+                init() {
+                    console.log('[PWA] 🎯 Alpine: Initializing install component...');
+                    
+                    // Check if already installed
+                    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                        console.log('[PWA] App is already installed');
+                        return;
+                    }
+
+                    // Check if user dismissed before
+                    if (localStorage.getItem('pwa_install_dismissed')) {
+                        const dismissedDate = new Date(localStorage.getItem('pwa_install_dismissed'));
+                        const now = new Date();
+                        const daysSinceDismiss = (now - dismissedDate) / (1000 * 60 * 60 * 24);
+                        
+                        // Show again after 7 days
+                        if (daysSinceDismiss < 7) {
+                            console.log('[PWA] Install prompt dismissed recently');
+                            return;
+                        }
+                    }
+                    
+                    // Track user engagement for Chrome heuristics
+                    let engagementScore = 0;
+                    const trackEngagement = () => {
+                        engagementScore++;
+                        console.log('[PWA] User engagement score:', engagementScore);
+                    };
+                    
+                    // Track clicks, scrolls, and time spent
+                    document.addEventListener('click', trackEngagement, { once: true });
+                    document.addEventListener('scroll', trackEngagement, { once: true });
+                    setTimeout(trackEngagement, 3000); // 3 seconds spent on page
+
+                    // Listen for the beforeinstallprompt event
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        console.log('[PWA] 🎯 Alpine: Install prompt available');
+                        e.preventDefault();
+                        this.deferredPrompt = e;
+                        // Show install prompt after 5 seconds
+                        setTimeout(() => {
+                            console.log('[PWA] 🎯 Alpine: Showing install prompt UI');
+                            this.showInstallPrompt = true;
+                        }, 5000);
+                    });
+                    
+                    // Also listen for custom event from global listener
+                    window.addEventListener('pwa-installable', (e) => {
+                        console.log('[PWA] 🎯 Alpine: Received pwa-installable event');
+                        if (e.detail) {
+                            e.detail.preventDefault();
+                            this.deferredPrompt = e.detail;
+                            setTimeout(() => {
+                                console.log('[PWA] 🎯 Alpine: Showing install prompt UI (from custom event)');
+                                this.showInstallPrompt = true;
+                            }, 5000);
+                        }
+                    });
+
+                    // Listen for successful installation
+                    window.addEventListener('appinstalled', () => {
+                        console.log('[PWA] App installed successfully!');
+                        this.showInstallPrompt = false;
+                        this.deferredPrompt = null;
+                        
+                        // Show success message
+                        alert('✅ Aplikasi berhasil diinstall! Anda sekarang dapat mengaksesnya dari home screen.');
+                    });
+                },
+
+                async installPWA() {
+                    if (!this.deferredPrompt) {
+                        console.log('[PWA] No install prompt available');
+                        return;
+                    }
+
+                    // Show the install prompt
+                    this.deferredPrompt.prompt();
+
+                    // Wait for the user's response
+                    const { outcome } = await this.deferredPrompt.userChoice;
+                    console.log(`[PWA] User response: ${outcome}`);
+
+                    if (outcome === 'accepted') {
+                        console.log('[PWA] User accepted the install prompt');
+                    } else {
+                        console.log('[PWA] User dismissed the install prompt');
+                    }
+
+                    // Clear the deferred prompt
+                    this.deferredPrompt = null;
+                    this.showInstallPrompt = false;
+                },
+
+                dismissInstall() {
+                    this.showInstallPrompt = false;
+                    localStorage.setItem('pwa_install_dismissed', new Date().toISOString());
+                    console.log('[PWA] Install prompt dismissed');
+                }
+            };
+        }
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            console.log('[PWA] Service Worker is supported!');
+            
+            window.addEventListener('load', () => {
+                console.log('[PWA] Page loaded, registering Service Worker...');
+                
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] ✅ Service Worker registered successfully!');
+                        console.log('[PWA] Scope:', registration.scope);
+                        console.log('[PWA] Registration:', registration);
+
+                        // Check for updates every hour
+                        setInterval(() => {
+                            console.log('[PWA] Checking for updates...');
+                            registration.update();
+                        }, 60 * 60 * 1000);
+
+                        // Listen for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            console.log('[PWA] New Service Worker found, installing...');
+
+                            newWorker.addEventListener('statechange', () => {
+                                console.log('[PWA] Service Worker state:', newWorker.state);
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('[PWA] New content available, please refresh!');
+                                    
+                                    // Show update banner
+                                    const updateBanner = document.querySelector('[x-data*="showUpdateBanner"]');
+                                    if (updateBanner && updateBanner.__x) {
+                                        updateBanner.__x.$data.showUpdateBanner = true;
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[PWA] ❌ Service Worker registration failed:', error);
+                        console.error('[PWA] Error details:', error.message);
+                    });
+
+                // Listen for controller change (new SW activated)
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('[PWA] New Service Worker activated');
+                });
+                
+                // Check current Service Worker status
+                navigator.serviceWorker.ready.then(registration => {
+                    console.log('[PWA] Service Worker is ready!');
+                    console.log('[PWA] Active worker:', registration.active);
+                });
+            });
+
+            // Handle messages from Service Worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('[PWA] Message from Service Worker:', event.data);
+                
+                if (event.data.type === 'CACHE_UPDATED') {
+                    console.log('[PWA] Cache has been updated');
+                }
+            });
+        } else {
+            console.warn('[PWA] ⚠️ Service Workers are not supported in this browser');
+        }
+
+        // Network Status Monitoring
+        window.addEventListener('online', () => {
+            console.log('[PWA] 🟢 Back online!');
+            // Optionally trigger data sync
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SYNC_DATA'
+                });
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('[PWA] 🔴 Connection lost - working offline');
+        });
+        
+        // Global beforeinstallprompt listener (for debugging)
+        let deferredInstallPrompt = null;
+        let installPromptFired = false;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('[PWA] ⭐ beforeinstallprompt event fired!');
+            console.log('[PWA] Install prompt is available');
+            console.log('[PWA] Event:', e);
+            deferredInstallPrompt = e;
+            installPromptFired = true;
+            
+            // Notify Alpine component
+            window.dispatchEvent(new CustomEvent('pwa-installable', { detail: e }));
+            
+            // Don't prevent default here, let the Alpine component handle it
+            // e.preventDefault();
+        });
+        
+        // Fallback: If beforeinstallprompt doesn't fire within 10 seconds,
+        // check if PWA criteria are met and show manual install guide
+        setTimeout(() => {
+            if (!installPromptFired) {
+                console.log('[PWA] ⚠️ beforeinstallprompt not fired after 10s');
+                console.log('[PWA] This can happen if:');
+                console.log('  1. PWA is already installed');
+                console.log('  2. Browser doesn\'t support installation (Firefox, Safari)');
+                console.log('  3. PWA criteria not fully met');
+                console.log('  4. User previously dismissed install prompt');
+                
+                // Check if already installed
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    console.log('[PWA] ✅ App is already installed!');
+                } else {
+                    console.log('[PWA] 💡 Try manual installation:');
+                    console.log('  - Chrome: Menu (⋮) → "Install Smart Irrigation System"');
+                    console.log('  - Edge: Menu (⋯) → "Apps" → "Install this site"');
+                    console.log('  - Chrome Android: Menu (⋮) → "Add to Home screen"');
+                }
+            }
+        }, 10000);
+        
+        // Global appinstalled listener
+        window.addEventListener('appinstalled', (e) => {
+            console.log('[PWA] 🎉 App installed successfully!');
+            console.log('[PWA] Install event:', e);
+            deferredInstallPrompt = null;
+        });
+
+        // Display mode detection
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('[PWA] 🚀 PWA Initialization started...');
+            console.log('[PWA] User Agent:', navigator.userAgent);
+            console.log('[PWA] Service Worker supported:', 'serviceWorker' in navigator);
+            console.log('[PWA] Manifest supported:', document.querySelector('link[rel="manifest"]') !== null);
+            
+            const displayMode = window.matchMedia('(display-mode: standalone)').matches || 
+                               window.navigator.standalone;
+            
+            if (displayMode) {
+                console.log('[PWA] ✅ Running as installed PWA');
+                document.body.classList.add('pwa-installed');
+            } else {
+                console.log('[PWA] 🌐 Running in browser (not installed)');
+            }
+            
+            // Check manifest
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                console.log('[PWA] Manifest link found:', manifestLink.href);
+                fetch(manifestLink.href)
+                    .then(response => response.json())
+                    .then(manifest => {
+                        console.log('[PWA] ✅ Manifest loaded successfully:', manifest);
+                    })
+                    .catch(error => {
+                        console.error('[PWA] ❌ Manifest load failed:', error);
+                    });
+            } else {
+                console.error('[PWA] ❌ Manifest link not found!');
+            }
+            
+            // Log all PWA criteria
+            console.log('[PWA] PWA Installability Criteria:');
+            console.log('  - HTTPS or localhost:', location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+            console.log('  - Service Worker:', 'serviceWorker' in navigator);
+            console.log('  - Manifest:', document.querySelector('link[rel="manifest"]') !== null);
+            console.log('  - Display mode:', window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser');
+            
+            // Advanced diagnostics
+            setTimeout(() => {
+                navigator.serviceWorker.ready.then((registration) => {
+                    console.log('[PWA] ✅ Service Worker is READY and ACTIVE');
+                    console.log('[PWA] Active SW:', registration.active);
+                    console.log('[PWA] SW State:', registration.active?.state);
+                    
+                    // Check if all criteria are met
+                    const isHttps = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+                    const hasSW = registration.active?.state === 'activated';
+                    const hasManifest = document.querySelector('link[rel="manifest"]') !== null;
+                    
+                    console.log('[PWA] 🔍 Installation Check:');
+                    console.log('  ✅ HTTPS/Localhost:', isHttps);
+                    console.log('  ' + (hasSW ? '✅' : '❌') + ' Service Worker Active:', hasSW);
+                    console.log('  ' + (hasManifest ? '✅' : '❌') + ' Manifest Present:', hasManifest);
+                    
+                    if (isHttps && hasSW && hasManifest) {
+                        console.log('[PWA] ✅ All criteria met! Waiting for beforeinstallprompt...');
+                        console.log('[PWA] 💡 If event doesn\'t fire:');
+                        console.log('     1. PWA might already be installed');
+                        console.log('     2. User engagement required (click/scroll)');
+                        console.log('     3. User dismissed prompt before');
+                        console.log('     4. Browser-specific delays (can take 30-60 seconds)');
+                    } else {
+                        console.log('[PWA] ❌ Some criteria not met - PWA not installable yet');
+                    }
+                }).catch(err => {
+                    console.error('[PWA] ❌ Service Worker not ready:', err);
+                });
+            }, 2000);
+        });
+
+        // Request notification permission (optional)
+        function requestNotificationPermission() {
+            if ('Notification' in window && 'serviceWorker' in navigator) {
+                Notification.requestPermission().then((permission) => {
+                    console.log('[PWA] Notification permission:', permission);
+                    
+                    if (permission === 'granted') {
+                        console.log('[PWA] Notifications enabled');
+                    }
+                });
+            }
+        }
+
+        // Background Sync (for offline actions)
+        async function registerBackgroundSync() {
+            if ('serviceWorker' in navigator && 'sync' in registration) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    await registration.sync.register('sync-data');
+                    console.log('[PWA] Background sync registered');
+                } catch (error) {
+                    console.error('[PWA] Background sync registration failed:', error);
+                }
+            }
+        }
+
+        // Share API (for sharing dashboard data)
+        async function shareData(title, text, url) {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: title,
+                        text: text,
+                        url: url
+                    });
+                    console.log('[PWA] Content shared successfully');
+                } catch (error) {
+                    console.error('[PWA] Share failed:', error);
+                }
+            } else {
+                console.warn('[PWA] Web Share API not supported');
+            }
+        }
+        
+        // Test PWA Install (for debugging)
+        window.testPWAInstall = async function() {
+            console.log('[PWA] 🧪 Manual install test triggered');
+            console.log('[PWA] Deferred prompt available:', deferredInstallPrompt !== null);
+            
+            if (deferredInstallPrompt) {
+                console.log('[PWA] Showing install prompt...');
+                deferredInstallPrompt.prompt();
+                
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                console.log('[PWA] User choice:', outcome);
+                
+                if (outcome === 'accepted') {
+                    console.log('[PWA] ✅ User accepted install');
+                } else {
+                    console.log('[PWA] ❌ User dismissed install');
+                }
+                
+                deferredInstallPrompt = null;
+            } else {
+                console.warn('[PWA] ⚠️ Install prompt not available');
+                console.log('[PWA] Possible reasons:');
+                console.log('  - App already installed');
+                console.log('  - beforeinstallprompt not fired yet');
+                console.log('  - Browser does not support PWA install');
+                console.log('  - Manifest or Service Worker issues');
+                
+                // Show diagnostic info
+                console.log('[PWA] Diagnostics:');
+                console.log('  - Installed:', window.matchMedia('(display-mode: standalone)').matches);
+                console.log('  - Protocol:', location.protocol);
+                console.log('  - Service Worker registered:', 'serviceWorker' in navigator);
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(regs => {
+                        console.log('  - Active registrations:', regs.length);
+                        regs.forEach((reg, index) => {
+                            console.log(`    ${index + 1}. Scope:`, reg.scope);
+                            console.log(`       State:`, reg.active ? reg.active.state : 'none');
+                        });
+                    });
+                }
+            }
+        };
+        
+        // Add keyboard shortcut for test (Ctrl+Shift+P)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                console.log('[PWA] 🎮 Keyboard shortcut triggered');
+                testPWAInstall();
+                e.preventDefault();
+            }
+        });
+
+        // Add to dashboard function for Alpine.js
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('pwa', {
+                isInstalled: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone,
+                isOnline: navigator.onLine,
+                
+                checkOnlineStatus() {
+                    this.isOnline = navigator.onLine;
+                },
+                
+                requestNotifications() {
+                    requestNotificationPermission();
+                },
+                
+                share(title, text, url) {
+                    shareData(title, text, url);
+                }
+            });
+        });
+
+        console.log('[PWA] PWA features initialized');
     </script>
 </body>
 
