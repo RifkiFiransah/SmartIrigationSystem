@@ -6,8 +6,7 @@ const PRECACHE_URLS = [
   '/',
   '/icon.svg',
   '/AgrinexLogo.jpg',
-  '/manifest.json',
-  '/offline.html'
+  '/manifest.json'
 ];
 
 // API endpoints to cache with network-first strategy

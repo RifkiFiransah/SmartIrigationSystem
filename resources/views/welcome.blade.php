@@ -19,14 +19,16 @@
     <meta name="msapplication-TileColor" content="#16a34a">
     <meta name="msapplication-tap-highlight" content="no">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
     
     <!-- Favicon -->
     @if (app()->environment('production'))
         <link rel="icon" type="image/png" href="images/agrinexlogo.jpg" />
         <link rel="apple-touch-icon" href="images/agrinexlogo.jpg" />
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="images/manifest.json">
     @else
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="{{ asset('manifest.json') }}">
         <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
         <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
         <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('AgrinexLogo.jpg') }}" />
@@ -4115,8 +4117,18 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             
             window.addEventListener('load', () => {
                 console.log('[PWA] Page loaded, registering Service Worker...');
+
+                // Register Service Worker
+                let swUrl = '/sw.js';
+
+                if (app()->environment('production')) {
+                    // In production, use the versioned service worker
+                    swUrl = '/images/sw.js';
+                }
                 
-                navigator.serviceWorker.register('/sw.js')
+                console.log('[PWA] Registering Service Worker at', swUrl);
+
+                navigator.serviceWorker.register(swUrl)
                     .then((registration) => {
                         console.log('[PWA] ✅ Service Worker registered successfully!');
                         console.log('[PWA] Scope:', registration.scope);
