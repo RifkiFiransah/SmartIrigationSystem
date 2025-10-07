@@ -1,7 +1,7 @@
 <div class="mt-6 grid md:grid-cols-2 gap-6" x-show="weekViewDays.length">
     <!-- Current Tasks -->
     <div class="card flex flex-col gap-4">
-        <div class="flex items-center justify-between">
+        {{-- <div class="flex items-center justify-between">
             <h3 class="font-semibold text-gray-800" x-text="t('activities')">Aktivitas / Peringatan</h3>
             <button class="text-gray-400 hover:text-gray-600 text-xs" @click="refreshTasks()">↻</button>
         </div>
@@ -22,6 +22,32 @@
                     </div>
                 </div>
             </template>
+        </div> --}}
+        <div class="flex flex-col space-y-4">
+            <!-- Header Prakiraan -->
+            <div class="flex items-center justify-between">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider" x-text="t('forecast')">Prakiraan</div>
+                <div class="flex bg-gray-100 rounded-lg overflow-hidden text-xs">
+                    <button type="button" class="px-4 py-2 focus:outline-none transition"
+                        :class="forecastView === '24h' ? 'bg-green-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'"
+                        @click="forecastView='24h'" x-text="t('next24h')" disabled>24 Jam</button>
+                </div>
+            </div>
+
+            <!-- 24h Forecast -->
+            <div x-show="forecastView==='24h'" class="grid grid-cols-2 sm:grid-cols-4 gap-3" x-cloak>
+                <template x-for="f in forecast24h" :key="f.local_datetime">
+                    <div class="bg-gray-50 border rounded-lg p-3 text-center hover:bg-gray-100 transition">
+                        <div class="text-sm font-semibold text-gray-700 mb-1" x-text="f.hour"></div>
+                        <template x-if="f.icon">
+                            <img :src="f.icon" class="h-8 w-8 mx-auto mb-2" loading="lazy" :alt="f.label" />
+                        </template>
+                        <div class="text-lg font-bold text-gray-800 tabular-nums" x-text="f.temp+'°C'"></div>
+                        <div class="text-xs text-gray-500 truncate" x-text="f.label"></div>
+                    </div>
+                </template>
+            </div>
+
         </div>
     </div>
     

@@ -1,5 +1,5 @@
 <section class="bg-white border border-gray-200 rounded-xl px-6 py-5 shadow-sm" x-show="weatherSummary">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <!-- Kolom 1: Waktu & Tanggal -->
         <div class="flex flex-col space-y-4">
             <!-- Waktu Sekarang -->
@@ -60,7 +60,7 @@
         </div>
 
         <!-- Kolom 3: Prakiraan -->
-        <div class="flex flex-col space-y-4">
+        {{-- <div class="flex flex-col space-y-4">
             <!-- Header Prakiraan -->
             <div class="flex items-center justify-between">
                 <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider" x-text="t('forecast')">Prakiraan</div>
@@ -108,6 +108,6 @@
                     </div>
                 </template>
             </div>
-        </div>
+        </div> --}}
     </div>
 </section>

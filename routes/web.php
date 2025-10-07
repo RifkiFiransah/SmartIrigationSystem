@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome-modular');
 });
 
 Route::get('/modular', function () {
-    return view('welcome-modular');
+    return view('welcome');
 });
 
 // Dashboard routes
