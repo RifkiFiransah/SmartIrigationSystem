@@ -59,17 +59,17 @@ class AdminPanelProvider extends PanelProvider
                 Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                SensorStatsOverview::class,
-                TemperatureChart::class,
-                SoilMoistureChart::class,
-                RealtimeStatusChart::class,
-                LightLuxChart::class,
-                WindSpeedChart::class,
-                WaterHeightChart::class,
-                Ina226MetricsChart::class,
-                ComprehensiveSensorChart::class,
-            ])
+            // ->widgets([
+            //     SensorStatsOverview::class,
+            //     TemperatureChart::class,
+            //     SoilMoistureChart::class,
+            //     RealtimeStatusChart::class,
+            //     LightLuxChart::class,
+            //     WindSpeedChart::class,
+            //     WaterHeightChart::class,
+            //     Ina226MetricsChart::class,
+            //     ComprehensiveSensorChart::class,
+            // ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
