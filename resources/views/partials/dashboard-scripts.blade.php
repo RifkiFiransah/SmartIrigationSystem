@@ -1,1218 +1,203 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
-
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <meta name="theme-color" :content="darkMode ? '#0f172a' : '#ffffff'" />
-    <meta http-equiv="Permissions-Policy"
-        content="accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" />
-    <title>Irigasi Pintar</title>
-    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
-    @if (app()->environment('production'))
-        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-        <script src="{{ asset('js/app.js') }}"></script>
-        <link rel="icon" type="image/png" href="images/agrinexlogo.jpg" />
-        <link rel="apple-touch-icon" href="images/agrinexlogo.jpg" />
-    @else
-        <link rel="icon" type="image/png" href="{{ asset('AgrinexLogo.jpg') }}" />
-        <link rel="apple-touch-icon" href="{{ asset('AgrinexLogo.jpg') }}" />
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endif
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <!-- Leaflet for interactive map (no API key needed) -->
-    <!-- Correct Leaflet SRI hashes (official) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <style>
-        :root {
-            color-scheme: light dark;
-        }
-
-        .card {
-            background-color: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            padding: 1.25rem;
-            transition: all 0.2s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .stat-label {
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            color: #6b7280;
-            text-transform: uppercase;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            line-height: 2rem;
-            font-weight: bold;
-            color: #1f2937;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.375rem 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-            line-height: 1rem;
-            font-weight: 500;
-            transition: all 0.15s ease-in-out;
-        }
-
-        .btn-ghost {
-            background-color: #f3f4f6;
-            color: #374151;
-            border: 1px solid #d1d5db;
-        }
-
-        .btn-ghost:hover {
-            background-color: #e5e7eb;
-            border-color: #9ca3af;
-        }
-
-        .skeleton {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            background-color: #e5e7eb;
-            border-radius: 0.25rem;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        @keyframes popIn {
-            0% {
-                transform: scale(.8);
-                opacity: 0
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1
-            }
-        }
-
-        .animate-pop {
-            animation: popIn .35s cubic-bezier(.4, 1.4, .4, 1) both
-        }
-
-        /* Metric icon base */
-        .metric-icon svg {
-            width: 20px;
-            height: 20px;
-            stroke-width: 2;
-        }
-
-        .metric-icon--small svg {
-            width: 16px;
-            height: 16px;
-            stroke-width: 2;
-        }
-
-        /* Enhanced card animations */
-        .metric-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .metric-card:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Gauge animations */
-        .gauge-progress {
-            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Custom scrollbar for small screens */
-        @media (max-width: 768px) {
-            .metrics-container {
-                overflow-x: auto;
-                scrollbar-width: thin;
-                scrollbar-color: #d1d5db transparent;
-            }
-
-            .metrics-container::-webkit-scrollbar {
-                height: 4px;
-            }
-
-            .metrics-container::-webkit-scrollbar-track {
-                background: transparent;
-            }
-
-            .metrics-container::-webkit-scrollbar-thumb {
-                background: #d1d5db;
-                border-radius: 2px;
-            }
-        }
-
-        /* Rain animation keyframes */
-        @keyframes rainDrop {
-            0% {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-
-            50% {
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-        }
-
-        .rain-drop {
-            animation: rainDrop 2s infinite linear;
-        }
-
-        /* Battery charging animation */
-        @keyframes batteryPulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.6;
-            }
-        }
-
-        .battery-full {
-            animation: batteryPulse 1.5s infinite ease-in-out;
-        }
-
-        /* Fix Leaflet z-index issues with modals */
-        .leaflet-container {
-            z-index: 1 !important;
-        }
-
-        .leaflet-control-container {
-            z-index: 2 !important;
-        }
-
-        .leaflet-popup {
-            z-index: 3 !important;
-        }
-
-        /* Ensure modal has higher z-index than leaflet */
-        .modal-overlay {
-            z-index: 9999 !important;
-        }
-
-        /* Leaflet tile layer should stay below everything */
-        .leaflet-tile-pane {
-            z-index: 1 !important;
-        }
-
-        .leaflet-overlay-pane {
-            z-index: 2 !important;
-        }
-
-        .leaflet-marker-pane {
-            z-index: 3 !important;
-        }
-
-        .leaflet-tooltip-pane {
-            z-index: 4 !important;
-        }
-
-        .leaflet-shadow-pane {
-            z-index: 1 !important;
-        }
-
-        /* Force all leaflet related elements to stay below modals */
-        #leafletMap .leaflet-container,
-        #leafletMapFull .leaflet-container {
-            z-index: 1 !important;
-            position: relative !important;
-        }
-
-        .gauge {
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .12));
-        }
-
-        .gauge-inner {
-            font-variant-numeric: tabular-nums;
-        }
-
-        .card-gradient-mask {
-            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, .4), transparent 70%);
-        }
-
-        /* Environmental Charts Styling */
-        .chart-legend-item {
-            transition: all 0.2s ease;
-        }
-
-        .chart-legend-item:hover {
-            transform: translateX(2px);
-        }
-    </style>
-</head>
-
-<body x-data="dashboard()" x-init="applyPersistedTheme();
-init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
-    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                @if (app()->environment('production'))
-                    <img src="images/agrinexlogo.jpg" alt="Logo"
-                        class="h-9 w-9 rounded-md object-cover border border-green-200 shadow-sm" loading="lazy">
-                @else
-                    <img src="{{ asset('AgrinexLogo.jpg') }}" alt="Logo"
-                        class="h-9 w-9 rounded-md object-cover border border-green-200 shadow-sm" loading="lazy">
-                @endif
-                <div>
-                    <h1 class="text-lg font-semibold text-green-700 leading-tight">Irigasi Pintar</h1>
-                    <p class="text-xs text-gray-600 -mt-0.5">Monitoring & otomasi penyiraman</p>
-                </div>
-                <template x-if="fetchError">
-                    <span
-                        class="ml-2 text-[10px] px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300"
-                        x-text="'OFFLINE'" title="Gagal mengambil data terakhir"></span>
-                </template>
-            </div>
-            <div class="flex items-center gap-2">
-                <button @click="loadAll(true)" class="btn btn-ghost"
-                    :class="loadingAll ? 'opacity-60 pointer-events-none' : ''">
-                    <span x-show="!loadingAll">🔄</span>
-                    <span x-show="loadingAll" class="animate-spin">⏳</span>
-                    <span class="hidden sm:inline" x-text="loadingAll ? 'Memuat' : 'Refresh'"></span>
-                </button>
-                @auth
-                    <a href="/admin" class="btn bg-green-600 hover:bg-green-700 text-white">Admin</a>
-                @else
-                    <a href="/admin/login" class="btn btn-ghost">Masuk</a>
-                @endauth
-            </div>
-        </div>
-    </header>
-
-    <main class="container mx-auto px-4 py-6 space-y-6 max-w-7xl">
-        <!-- Waktu, Tanggal & Cuaca Terpadu -->
-        <section class="bg-white border border-gray-200 rounded-xl px-6 py-5 shadow-sm" x-show="weatherSummary">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <!-- Kolom 1: Waktu & Tanggal -->
-                <div class="flex flex-col space-y-4">
-                    <!-- Waktu Sekarang -->
-                    <div class="flex flex-col">
-                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Waktu Sekarang
-                        </div>
-                        <div class="flex items-end gap-2">
-                            <div class="text-4xl font-bold text-gray-800 tabular-nums" x-text="clock.time"></div>
-                            <div class="text-lg text-gray-500 font-medium pb-1" x-text="clock.seconds"></div>
-                        </div>
-                    </div>
-
-                    <!-- Tanggal Hari Ini -->
-                    <div class="flex flex-col">
-                        <div class="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-2">Tanggal Hari Ini
-                        </div>
-                        <div class="grid grid-cols-3 gap-3 text-center">
-                            <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Tanggal</div>
-                                <div class="text-2xl font-bold text-gray-800" x-text="clock.day"></div>
-                            </div>
-                            <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Bulan</div>
-                                <div class="text-2xl font-bold text-gray-800" x-text="clock.month"></div>
-                            </div>
-                            <div class="px-3 py-3 rounded-lg bg-gray-50 border hover:bg-gray-100 transition">
-                                <div class="text-xs font-semibold text-gray-600 mb-1">Tahun</div>
-                                <div class="text-2xl font-bold text-gray-800" x-text="clock.year"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Kolom 2: Cuaca Saat Ini -->
-                <div class="flex flex-col items-center text-center space-y-3" aria-live="polite">
-                    <template x-if="weatherSummary && weatherSummary.icon">
-                        <img :src="weatherSummary.icon" :alt="weatherSummary.label || 'Ikon Cuaca'" class="h-20 w-20"
-                            loading="lazy" />
-                    </template>
-                    <div>
-                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cuaca Saat Ini
-                        </div>
-                        <div class="text-5xl font-bold leading-none text-gray-800 tabular-nums mb-1"
-                            x-text="weatherSummary ? (weatherSummary.temp+'°C') : '-' "></div>
-                        <div class="text-lg text-gray-600 mb-3" x-text="weatherSummary ? weatherSummary.label : '-' ">
-                        </div>
-                    </div>
-
-                    <!-- Detail Cuaca -->
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
-                        <div class="flex items-center gap-2"><span>💧</span><span
-                                x-text="weatherSummary ? (weatherSummary.humidity+'%') : '-' "></span></div>
-                        <div class="flex items-center gap-2"><span>🌬️</span><span
-                                x-text="weatherSummary ? (weatherSummary.wind_speed+' m/s') : '-' "></span></div>
-                        <div class="flex items-center gap-2" x-show="weatherSummary && weatherSummary.rain!=null">
-                            <span>☔</span><span x-text="weatherSummary ? (weatherSummary.rain+' mm') : '-' "></span>
-                        </div>
-                        <div class="flex items-center gap-2"
-                            x-show="weatherSummary && weatherSummary.light_pct!=null">
-                            <span>🔆</span><span
-                                x-text="weatherSummary ? (weatherSummary.light_pct+'% cahaya') : '-' "></span>
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-400" x-text="weatherSummary ? weatherSummary.time : ''"></div>
-                </div>
-
-                <!-- Kolom 3: Prakiraan -->
-                <div class="flex flex-col space-y-4">
-                    <!-- Header Prakiraan -->
-                    <div class="flex items-center justify-between">
-                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Prakiraan</div>
-                        <div class="flex bg-gray-100 rounded-lg overflow-hidden text-xs">
-                            <button type="button" class="px-4 py-2 focus:outline-none transition"
-                                :class="forecastView === '24h' ? 'bg-green-600 text-white shadow' :
-                                    'text-gray-600 hover:bg-gray-200'"
-                                @click="forecastView='24h'">24 Jam</button>
-                            <button type="button" class="px-4 py-2 focus:outline-none transition"
-                                :class="forecastView === 'weekly' ? 'bg-green-600 text-white shadow' :
-                                    'text-gray-600 hover:bg-gray-200'"
-                                @click="forecastView='weekly'">Minggu</button>
-                        </div>
-                    </div>
-
-                    <!-- 24h Forecast -->
-                    <div x-show="forecastView==='24h'" class="grid grid-cols-2 sm:grid-cols-4 gap-3" x-cloak>
-                        <template x-for="f in forecast24h" :key="f.local_datetime">
-                            <div class="bg-gray-50 border rounded-lg p-3 text-center hover:bg-gray-100 transition">
-                                <div class="text-sm font-semibold text-gray-700 mb-1" x-text="f.hour"></div>
-                                <template x-if="f.icon">
-                                    <img :src="f.icon" class="h-8 w-8 mx-auto mb-2" loading="lazy"
-                                        :alt="f.label" />
-                                </template>
-                                <div class="text-lg font-bold text-gray-800 tabular-nums" x-text="f.temp+'°C'"></div>
-                                <div class="text-xs text-gray-500 truncate" x-text="f.label"></div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- Weekly Forecast -->
-                    <div x-show="forecastView==='weekly'" class="space-y-2 max-h-64 overflow-y-auto pr-2" x-cloak>
-                        <template x-for="d in forecastWeekly" :key="d.date">
-                            <div
-                                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 text-sm font-semibold text-gray-700" x-text="d.day"></div>
-                                    <template x-if="d.icon">
-                                        <img :src="d.icon" class="h-6 w-6" loading="lazy"
-                                            :alt="d.label" />
-                                    </template>
-                                    <div class="text-sm text-gray-600" x-text="d.label"></div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <div class="text-sm font-medium tabular-nums" x-text="d.min+'° / '+d.max+'°'">
-                                    </div>
-                                    <div class="flex items-center gap-1 text-xs text-blue-600" x-show="d.rain!=null">
-                                        <span>☔</span><span x-text="d.rain+'mm'"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Weekly Tasks & Upcoming Week (Styled) -->
-        <div class="mt-6 grid md:grid-cols-2 gap-6" x-show="weekViewDays.length">
-            <!-- Current Tasks -->
-            <div class="card flex flex-col gap-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-800">Aktivitas / Peringatan</h3>
-                    <button class="text-gray-400 hover:text-gray-600 text-xs" @click="refreshTasks()">↻</button>
-                </div>
-                <template x-if="!currentTasks.length">
-                    <div class="text-xs text-gray-500">Tidak ada aktivitas.</div>
-                </template>
-                <div class="space-y-3">
-                    <template x-for="t in currentTasks" :key="t.id">
-                        <div class="flex gap-3 items-stretch">
-                            <div
-                                :class="['w-12 shrink-0 rounded-md flex flex-col items-center justify-center text-white text-[10px] font-semibold',
-                                    t.color
-                                ]">
-                                <span x-text="t.badgeValue"></span><span x-text="t.badgeLabel"></span>
-                            </div>
-                            <div class="flex-1 bg-white border border-gray-200 rounded-md px-3 py-2 shadow-sm">
-                                <div class="text-xs font-medium" x-text="t.title"></div>
-                                <div class="text-[11px] mt-1" x-html="t.desc"></div>
-                                <div class="mt-1 text-[10px] font-medium px-2 py-0.5 rounded inline-block"
-                                    :class="t.tagColor" x-text="t.tag"></div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-            <!-- Upcoming Week -->
-            <div class="card flex flex-col gap-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-800">Minggu Ini</h3>
-                    <div class="flex gap-1">
-                        <button class="px-2 py-1 text-[10px] rounded bg-gray-100 hover:bg-gray-200"
-                            @click="shiftWeek(-1)">◀</button>
-                        <button class="px-2 py-1 text-[10px] rounded bg-gray-100 hover:bg-gray-200"
-                            @click="shiftWeek(1)">▶</button>
-                    </div>
-                </div>
-                <div class="flex justify-between text-[11px] font-semibold text-green-800 px-1">
-                    <template x-for="d in weekViewDays" :key="d.date">
-                        <div class="flex-1 text-center" x-text="d.weekdayShort"></div>
-                    </template>
-                </div>
-                <div class="flex justify-between gap-2">
-                    <template x-for="d in weekViewDays" :key="d.date">
-                        <div @click="selectWeekDay(d)"
-                            :class="['flex-1 relative rounded-2xl py-3 flex flex-col items-center gap-1 cursor-pointer transition-all duration-200 animate-pop',
-                                d.categoryBg, d.active ?
-                                'ring-4 ring-green-500 ring-offset-2 ring-offset-white shadow-lg scale-[1.05]' :
-                                'hover:shadow'
-                            ]">
-                            <div class="text-[11px] font-semibold tracking-wide" x-text="d.day"></div>
-                            <template x-if="d.icon"><img :src="d.icon" class="h-7 w-7"
-                                    loading="lazy" /></template>
-                            <div class="text-lg font-bold leading-none" x-text="d.temp"></div>
-                            <div class="text-[10px] font-medium" x-text="d.label"></div>
-                            <div
-                                class="absolute inset-0 rounded-2xl pointer-events-none bg-white/5 opacity-0 hover:opacity-40 transition">
-                            </div>
-                        </div>
-                    </template>
-                </div>
-                <div class="flex flex-wrap gap-4 mt-2 text-[9px]">
-                    <template x-for="l in weekLegend" :key="l.key">
-                        <div class="flex items-center gap-1">
-                            <span :class="['inline-block w-3 h-3 rounded-full', l.bg]"></span>
-                            <span x-text="l.label"></span>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-        </section>
-
-        <!-- Environmental Charts Section -->
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Light Intensity Chart -->
-            <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Light Intensity</h3>
-                        <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
-                            x-text="lightIntensityData.labels.length > 0 ? (lightIntensityData.labels.length + ' points') : 'No data'">
-                        </span>
-                    </div>
-                    <div class="flex gap-6 text-sm">
-                        <div class="chart-legend-item flex items-center gap-2">
-                            <div class="w-4 h-4 rounded bg-cyan-400"></div>
-                            <span class="text-gray-700 font-medium">LI2</span>
-                        </div>
-                        <div class="chart-legend-item flex items-center gap-2">
-                            <div class="w-4 h-4 rounded bg-red-500"></div>
-                            <span class="text-gray-700 font-medium">LI1</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="relative bg-white border border-gray-200 rounded-lg p-4" style="height: 320px;">
-                    <canvas id="lightIntensityChart"></canvas>
-                </div>
-                <div class="mt-3 text-center">
-                    <p class="text-xs text-gray-500">Data diperbarui otomatis setiap 60 detik</p>
-                </div>
-            </div>
-
-            <!-- Water Level Chart -->
-            <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Water Level</h3>
-                        <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700" 
-                            x-text="waterLevelData.labels.length > 0 ? (waterLevelData.labels.length + ' points') : 'No data'">
-                        </span>
-                    </div>
-                    <div class="flex gap-6 text-sm">
-                        <div class="chart-legend-item flex items-center gap-2">
-                            <div class="w-4 h-4 rounded bg-lime-500"></div>
-                            <span class="text-gray-700 font-medium">WL</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="relative bg-white border border-gray-200 rounded-lg p-4" style="height: 320px;">
-                    <canvas id="waterLevelChart"></canvas>
-                </div>
-                <div class="mt-3 text-center">
-                    <p class="text-xs text-gray-500">Data diperbarui otomatis setiap 60 detik</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Additional Environmental Charts (Soil Moisture, Temperature, Humidity) -->
-        <section class="grid grid-cols-1 gap-6">
-            <!-- Soil Moisture Chart -->
-            <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-gray-900 text-xl font-bold">Soil Moisture</h3>
-                        <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
-                            x-text="soilMoistureData.labels.length > 0 ? (soilMoistureData.labels.length + ' points') : 'No data'">
-                        </span>
-                    </div>
-                    <div class="flex flex-wrap gap-3 text-xs">
-                        <template x-for="(sensor, idx) in soilMoistureSensors" :key="sensor.id">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded" :style="'background-color: ' + sensor.color"></div>
-                                <span class="text-gray-700 font-medium" x-text="sensor.label"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <div class="relative bg-white border border-gray-200 rounded-lg p-4" style="height: 320px;">
-                    <canvas id="soilMoistureChart"></canvas>
-                </div>
-                <div class="mt-3 text-center">
-                    <p class="text-xs text-gray-500">Kelembapan tanah dari berbagai sensor</p>
-                </div>
-            </div>
-
-            <!-- Temperature and Humidity Charts (Side by Side) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Temperature Chart -->
-                <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
-                    <div class="mb-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-gray-900 text-xl font-bold">Temperature</h3>
-                            <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700" 
-                                x-text="temperatureData.labels.length > 0 ? (temperatureData.labels.length + ' points') : 'No data'">
-                            </span>
-                        </div>
-                        <div class="flex gap-4 text-sm">
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded bg-purple-500"></div>
-                                <span class="text-gray-700 font-medium">T1</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded bg-cyan-500"></div>
-                                <span class="text-gray-700 font-medium">T2</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative bg-white border border-gray-200 rounded-lg p-4" style="height: 280px;">
-                        <canvas id="temperatureChart"></canvas>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <p class="text-xs text-gray-500">Suhu dari sensor</p>
-                    </div>
-                </div>
-
-                <!-- Humidity Chart -->
-                <div class="bg-white border-2 border-gray-300 rounded-2xl p-6 shadow-xl">
-                    <div class="mb-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-gray-900 text-xl font-bold">Humidity</h3>
-                            <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" 
-                                x-text="humidityData.labels.length > 0 ? (humidityData.labels.length + ' points') : 'No data'">
-                            </span>
-                        </div>
-                        <div class="flex gap-4 text-sm">
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded bg-blue-500"></div>
-                                <span class="text-gray-700 font-medium">H2</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded bg-orange-500"></div>
-                                <span class="text-gray-700 font-medium">H1</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative bg-white border border-gray-200 rounded-lg p-4" style="height: 280px;">
-                        <canvas id="humidityChart"></canvas>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <p class="text-xs text-gray-500">Kelembapan dari sensor</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Top Metrics (Gauge / Linear Cards) -->
-        <section>
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold tracking-wide text-gray-600 uppercase">Ringkasan Lingkungan</h2>
-                <div class="text-[10px] text-gray-500"
-                    x-text="lastUpdated ? ('Update: '+ lastUpdated.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})) : ''">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <template x-for="m in topMetricCards" :key="m.key">
-                    <div class="relative bg-white border border-gray-200 rounded-2xl p-4 flex flex-col overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group"
-                        :class="getCardTheme(m.key)">
-                        <!-- Background gradient overlay -->
-                        <div class="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                            :style="getCardGradient(m.key)"></div>
-
-                        <!-- Header with icon and title -->
-                        <div class="relative z-10 flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 rounded-xl" :style="getIconBackground(m.key)">
-                                    <div class="metric-icon text-white" x-html="metricIcon(m.key)"></div>
-                                </div>
-                                <div class="text-xs font-semibold text-gray-700" x-text="m.label"></div>
-                            </div>
-                            <div class="text-[9px] text-gray-400" x-text="m.desc"></div>
-                        </div>
-
-                        <!-- Gauge Type - Circular Design -->
-                        <template x-if="m.type==='gauge'">
-                            <div class="relative z-10 flex flex-col items-center">
-                                <!-- Large circular gauge -->
-                                <div class="relative w-20 h-20 mb-2">
-                                    <svg class="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
-                                        <!-- Background circle -->
-                                        <circle cx="40" cy="40" r="32" stroke="#e5e7eb"
-                                            stroke-width="6" fill="none" />
-                                        <!-- Progress circle -->
-                                        <circle cx="40" cy="40" r="32" :stroke="getGaugeColor(m.key)"
-                                            stroke-width="6" fill="none" stroke-linecap="round"
-                                            :stroke-dasharray="`${2 * Math.PI * 32}`"
-                                            :stroke-dashoffset="`${2 * Math.PI * 32 * (1 - m.pct / 100)}`"
-                                            class="transition-all duration-500" />
-                                    </svg>
-                                    <!-- Center value -->
-                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span class="text-lg font-bold" x-text="m.display"
-                                            :style="`color: ${getGaugeColor(m.key)}`"></span>
-                                        <span class="text-[9px] text-gray-500" x-text="m.unit"></span>
-                                    </div>
-                                </div>
-                                <!-- Range indicators -->
-                                <div class="flex items-center justify-between w-full text-[9px] text-gray-500">
-                                    <span x-text="m.min + m.unit"></span>
-                                    <span class="font-semibold" x-text="Math.round(m.pct) + '%'"></span>
-                                    <span x-text="m.max + m.unit"></span>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- Linear Type - Horizontal Bar Design -->
-                        <template x-if="m.type==='linear'">
-                            <div class="relative z-10 flex flex-col">
-                                <!-- Value and unit -->
-                                <div class="flex items-end justify-between mb-2">
-                                    <div class="text-2xl font-bold" x-text="m.display"
-                                        :style="`color: ${getGaugeColor(m.key)}`"></div>
-                                    <div class="text-xs text-gray-500" x-text="m.unit"></div>
-                                </div>
-
-                                <!-- Horizontal progress bar -->
-                                <div class="w-full h-6 bg-gray-100 rounded-full relative overflow-hidden mb-2">
-                                    <!-- Background gradient -->
-                                    <div class="absolute inset-0 opacity-20" :style="getLinearGradient(m.key)"></div>
-
-                                    <!-- Progress fill with rounded shape -->
-                                    <div class="absolute left-0 top-0 bottom-0 rounded-full transition-all duration-1000 flex items-center justify-end pr-2"
-                                        :style="`width: ${Math.max(20, m.pct)}%; background: ${getGaugeColor(m.key)}`">
-                                        <span class="text-white text-[10px] font-bold"
-                                            x-text="Math.round(m.pct) + '%'"></span>
-                                    </div>
-                                </div>
-
-                                <!-- Range indicators -->
-                                <div class="flex items-center justify-between text-[9px] text-gray-400">
-                                    <span x-text="m.min + m.unit"></span>
-                                    <span x-text="m.desc"></span>
-                                    <span x-text="m.max + m.unit"></span>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- Plain Type - Clean Design -->
-                        <template x-if="m.type==='plain'">
-                            <div class="relative z-10 flex flex-col items-center justify-center h-full">
-                                <!-- Large value display -->
-                                <div class="text-2xl font-bold mb-1 text-center" x-text="m.display"
-                                    :style="`color: ${getGaugeColor(m.key)}`"></div>
-                                <!-- Unit -->
-                                <div class="text-xs text-gray-500 mb-2" x-text="m.unit"></div>
-                                <!-- Status indicator -->
-                                <div class="text-[10px] text-gray-400 px-2 py-1 rounded-full bg-gray-100"
-                                    x-text="m.desc"></div>
-                                <!-- Decorative animated drops for rain -->
-                                <template x-if="m.key === 'rain'">
-                                    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-                                        <div class="absolute top-2 left-3 w-1 h-1 bg-blue-300 rounded-full opacity-60 animate-bounce"
-                                            style="animation-delay: 0s;"></div>
-                                        <div class="absolute top-4 right-4 w-1 h-1 bg-blue-400 rounded-full opacity-40 animate-bounce"
-                                            style="animation-delay: 0.5s;"></div>
-                                        <div class="absolute bottom-6 left-1/2 w-1 h-1 bg-blue-300 rounded-full opacity-50 animate-bounce"
-                                            style="animation-delay: 1s;"></div>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-
-                        <!-- Subtle background icon -->
-                        <div class="absolute right-2 bottom-2 opacity-5 metric-icon" x-html="metricIcon(m.key)"
-                            style="transform: scale(1.5);"></div>
-                    </div>
-                </template>
-            </div>
-        </section>
-
-        <!-- Latest Devices & Tank -->
-        <section class="grid lg:grid-cols-3 gap-6">
-            <!-- Devices -->
-            <div class="lg:col-span-2 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                    <h2 class="font-semibold text-lg text-gray-900">Pembacaan Perangkat Terbaru</h2>
-                    <button @click="loadAll()"
-                        class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all">Refresh</button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-                    x-show="devices.length">
-                    <template x-for="d in devices" :key="d.device_id">
-                        <div class="card relative group cursor-pointer hover:shadow-lg transition"
-                            @click="openDeviceModal(d)" title="Klik untuk detail device">
-                            <!-- Status badges di kanan atas -->
-                            <div class="absolute right-2 top-2 flex flex-col-3 gap-1.5 items-end z-10 max-w-[120px] mb-10">
-                                <!-- Status sensor (kritis/normal) -->
-                                <div class="text-[10px] px-2.5 py-1 rounded-full border font-medium shadow-sm whitespace-nowrap backdrop-blur-sm"
-                                    :class="statusShort(d.status) === 'kritis' ? 'bg-red-100/90 text-red-700 border-red-200' :
-                                        'bg-green-100/90 text-green-700 border-green-200'">
-                                    <span x-text="statusShort(d.status)"></span>
-                                </div>
-                                <!-- Connection state badge -->
-                                <div class="text-[9px] px-2 py-0.5 rounded-full border font-medium shadow-sm whitespace-nowrap backdrop-blur-sm"
-                                    :class="d.connection_state === 'online' ? 'bg-blue-100/90 text-blue-700 border-blue-200' :
-                                        'bg-gray-100/90 text-gray-600 border-gray-200'">
-                                    <span x-text="d.connection_state === 'online' ? '● Online' : '○ Offline'"></span>
-                                </div>
-                                <!-- Valve state badge -->
-                                <div class="text-[9px] px-2 py-0.5 rounded-full border font-medium shadow-sm whitespace-nowrap backdrop-blur-sm"
-                                    :class="d.valve_state === 'open' ? 'bg-green-100/90 text-green-700 border-green-200' :
-                                        'bg-gray-100/90 text-gray-600 border-gray-200'">
-                                    <span x-text="d.valve_state === 'open' ? '🟢 Open' : '⚪ Closed'"></span>
-                                </div>
-                            </div>
-                            <div class="mb-3 mt-5 flex items-center justify-between pr-28">
-                                <h3 class="font-semibold text-sm text-gray-900 truncate pr-6" x-text="d.device_name">
-                                </h3>
-                                <span class="text-[10px] text-gray-400" x-text="timeAgo(d.recorded_at)"></span>
-                            </div>
-                            <!-- Highlight Soil Moisture -->
-                            <div class="flex items-center gap-3 mb-4">
-                                <div
-                                    class="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-green-500 to-green-600 text-white shadow-inner">
-                                    <!-- leaf / drop icon -->
-                                    <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor"
-                                        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 2C12 2 6 9 6 13a6 6 0 0 0 12 0c0-4-6-11-6-11z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Kelembapan
-                                        Tanah</div>
-                                    <div class="text-2xl font-bold leading-none"
-                                        x-text="fmt(d.soil_moisture_pct,' %')"></div>
-                                </div>
-                            </div>
-                            <!-- Mini metrics row -->
-                            <div class="grid grid-cols-3 gap-2 text-[11px] font-medium text-gray-600 mb-2">
-                                <div class="flex flex-col items-center bg-gray-50 rounded-md py-1">
-                                    <span class="text-[10px] font-normal text-gray-500">Suhu</span>
-                                    <span x-text="fmt(d.temperature_c,'°C')"
-                                        class="font-semibold text-gray-800"></span>
-                                </div>
-                                <div class="flex flex-col items-center bg-gray-50 rounded-md py-1">
-                                    <span class="text-[10px] font-normal text-gray-500">Baterai</span>
-                                    <span x-text="batteryDisplayShort(d)" class="font-semibold text-gray-800"></span>
-                                </div>
-                                <div class="flex flex-col items-center bg-gray-50 rounded-md py-1">
-                                    <span class="text-[10px] font-normal text-gray-500">Air</span>
-                                    <span x-text="deviceUsageToday(d.device_id)"
-                                        class="font-semibold text-gray-800"></span>
-                                </div>
-                            </div>
-                            <div class="text-[10px] text-gray-400" x-text="d.location || '-' "></div>
-                        </div>
-                    </template>
-                </div>
-                <div x-show="!devices.length && !loadingDevices" class="text-sm text-gray-600">Tidak ada data
-                    perangkat.
-                </div>
-                <div x-show="loadingDevices" class="flex gap-3">
-                    <template x-for="i in 3" :key="i">
-                        <div class="card w-full space-y-2">
-                            <div class="skeleton h-4 w-24"></div>
-                            <div class="skeleton h-3 w-16"></div>
-                            <div class="space-y-1 pt-2">
-                                <div class="skeleton h-3 w-full"></div>
-                                <div class="skeleton h-3 w-5/6"></div>
-                                <div class="skeleton h-3 w-3/4"></div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Tank -->
-            <div class="space-y-4">
-                <h2 class="font-semibold text-lg text-gray-900">Tangki Air</h2>
-                <div class="card" x-show="tank.id">
-                    <h3 class="font-semibold text-gray-900" x-text="tank.tank_name"></h3>
-                    <div class="mt-3 flex gap-6 items-stretch">
-                        <!-- Visual Tangki -->
-                        <div class="relative" style="width:90px; height:170px;">
-                            <div
-                                class="absolute inset-0 rounded-xl border-2 border-gray-300 bg-gradient-to-b from-gray-50 to-gray-100 overflow-hidden flex flex-col">
-                                <!-- Ticks -->
-                                <template x-for="lvl in [100,80,60,40,20]" :key="lvl">
-                                    <div class="absolute left-0 right-0 flex items-center"
-                                        :style="`bottom: calc(${lvl}% - 1px);`">
-                                        <div class="w-full h-px bg-gray-300/60"></div>
-                                        <div class="text-[8px] -ml-1 -mt-2 bg-white/70 px-0.5 rounded"
-                                            x-text="lvl+'%'"></div>
-                                    </div>
-                                </template>
-                                <!-- Isi -->
-                                <div class="absolute left-0 right-0 bottom-0 transition-all duration-700 ease-out"
-                                    :style="`height:${tank.percentage || 0}%;`">
-                                    <div class="absolute inset-0" :style="tankFillStyle()"></div>
-                                    <!-- Wave overlay sederhana -->
-                                    <svg class="absolute inset-x-0 -top-4 h-6 w-full" viewBox="0 0 120 20"
-                                        preserveAspectRatio="none">
-                                        <path :fill="tankFillColor()" fill-opacity="0.55"
-                                            d="M0 10 Q 10 0 20 10 T 40 10 T 60 10 T 80 10 T 100 10 T 120 10 V20 H0 Z">
-                                        </path>
-                                    </svg>
-                                    <!-- Label persentase di atas permukaan -->
-                                    <div class="absolute top-0 right-1 mt-0.5 text-[11px] font-semibold select-none px-1.5 py-0.5 rounded-md shadow-sm ring-1 ring-black/5"
-                                        :class="tankLabelClass()"
-                                        x-text="tank.percentage!=null? tank.percentage.toFixed(0)+'%' : ''"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Info -->
-                        <div class="flex-1 flex flex-col text-xs text-gray-700">
-                            <div class="flex justify-between mb-1 font-medium">
-                                <span>Level</span>
-                                <span x-text="tank.percentage!=null? tank.percentage.toFixed(1)+'%' : '-' "></span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-y-1 gap-x-3 mt-1">
-                                <div class="text-gray-500">Kapasitas</div>
-                                <div x-text="tank.capacity_liters? tank.capacity_liters.toFixed(0)+' L':'-' "></div>
-                                <div class="text-gray-500">Tersisa</div>
-                                <div
-                                    x-text="tank.current_volume_liters? tank.current_volume_liters.toFixed(0)+' L':'-' ">
-                                </div>
-                                <div class="text-gray-500">Terpakai</div>
-                                <div
-                                    x-text="tank.capacity_liters&&tank.current_volume_liters!=null? (tank.capacity_liters - tank.current_volume_liters).toFixed(0)+' L':'-' ">
-                                </div>
-                                <div class="text-gray-500">Status</div>
-                                <div class="font-medium" :class="tankStatusClass()" x-text="tank.status || '-' ">
-                                </div>
-                            </div>
-                            <div class="mt-auto pt-2 text-[10px] text-gray-400" x-show="tankUpdatedAt">
-                                <span x-text="'Update: '+ tankUpdatedAt"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card" x-show="plan.sessions && plan.sessions.length">
-                    <h3 class="font-semibold mb-2 text-gray-900">Rencana Irigasi (3 Sesi)</h3>
-                    <ul class="divide-y text-xs">
-                        <template x-for="s in plan.sessions" :key="s.index">
-                            <li class="py-1 flex justify-between items-center">
-                                <span>Sesi <span x-text="s.index"></span> (<span x-text="s.time"></span>)</span>
-                                <span class="font-medium" :class="sessionColor(s.status)"
-                                    x-text="s.actual_l ? s.actual_l+'L' : s.adjusted_l+'L'"></span>
-                            </li>
-                        </template>
-                    </ul>
-                    <p class="mt-2 text-xs text-gray-600" x-text="plan.status ? 'Status: '+plan.status : ''"></p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Usage Chart - 2 Cards Side by Side -->
-        <section class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <h2 class="font-semibold text-lg text-gray-900">Riwayat Penggunaan Air</h2>
-                <button @click="loadUsage(); loadUsageDaily()"
-                    class="text-xs px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white shadow-md hover:shadow-lg transition-all">Refresh</button>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Card Kiri: 30 Hari -->
-                <div class="card flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-base font-semibold text-gray-800 mb-1">Penggunaan 30 Hari Terakhir</h3>
-                        <p class="text-xs text-gray-600">Data harian dalam 30 hari terakhir</p>
-                    </div>
-                    <div class="flex-1 flex items-center justify-center" style="height: 140px;">
-                        <canvas id="usageChart30d" width="100%" height="140"></canvas>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <div class="text-xs text-gray-600">
-                            <span class="font-semibold text-green-600"
-                                x-text="usage.length ? 'Total ' + totalUsage() + ' L' : 'Belum ada data'"></span>
-                            <span x-show="usage.length" x-text="' / ' + usage.length + ' hari'"></span>
-                        </div>
-                        <div class="text-xs text-gray-600">
-                            <span class="font-semibold text-green-600"
-                                x-text="'Rata-rata: ' + avgUsage() + ' L'"></span>
-                            <span>/hari</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card Kanan: 24 Jam -->
-                <div class="card flex flex-col">
-                    <div class="mb-4">
-                        <h3 class="text-base font-semibold text-gray-800 mb-1">Penggunaan 24 Jam Terakhir</h3>
-                        <p class="text-xs text-gray-600">Data per jam dalam 24 jam terakhir</p>
-                    </div>
-                    <div class="flex-1 flex items-center justify-center" style="height: 140px;">
-                        <canvas id="usageChart24h" width="100%" height="140"></canvas>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <div class="text-xs text-gray-600">
-                            <span class="font-semibold text-blue-600"
-                                x-text="usage24h && usage24h.length ? 'Total ' + totalUsage24h() + ' L' : 'Belum ada data'"></span>
-                            <span x-show="usage24h && usage24h.length" x-text="' / 24 jam'"></span>
-                        </div>
-                        <div class="text-xs text-gray-600">
-                            <span class="font-semibold text-blue-600"
-                                x-text="'Rata-rata: ' + avgUsage24h() + ' L'"></span>
-                            <span>/jam</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Lokasi (2 Kolom: Street View & Denah) -->
-        <section class="grid lg:grid-cols-2 gap-6">
-            <!-- Street View Kiri -->
-            <div class="card relative overflow-hidden flex flex-col">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="font-semibold text-gray-800">Street View Lahan</h2>
-                    <span
-                        class="text-[11px] px-2 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Live</span>
-                </div>
-                <div class="relative aspect-video w-full rounded-lg overflow-hidden border bg-gray-100">
-                    <!-- Adjusted Street View (heading ~110°, pitch lowered to show ground) -->
-                    <iframe class="w-full h-full" allowfullscreen loading="lazy"
-                        referrerpolicy="no-referrer-when-downgrade"
-                        src="https://www.google.com/maps/embed?pb=!4v1726850000!6m8!1m7!1sqN2B4gU9-KNJvTDT55KJcA!2m2!1d-6.9863524!2d108.6008761!3f108.38!4f10!5f0.7820865974627469"></iframe>
-                    <div class="absolute bottom-2 left-2 flex flex-wrap gap-2">
-                        <template
-                            x-for="m in topMetricCards.filter(x=>['temp','humidity','light','wind'].includes(x.key))"
-                            :key="m.key">
-                            <div class="backdrop-blur bg-white/55 border border-white/40 text-[10px] px-2 py-1 rounded flex items-center gap-1 shadow-sm cursor-help"
-                                :data-metric-chip="m.key">
-                                <span class="metric-icon metric-icon--small text-gray-600"
-                                    x-html="metricIcon(m.key)"></span>
-                                <span x-text="m.display"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <p class="mt-3 text-xs text-gray-600 leading-relaxed">Tampilan Street View area lahan di desa Geresik
-                    sebagai konteks lingkungan penempatan sensor. Arahkan kursor ke chip metric untuk melihat snapshot
-                    waktu.</p>
-            </div>
-            <!-- Denah Desa Kanan -->
-            <div class="card flex flex-col relative">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="font-semibold text-gray-800">Denah Desa (Interaktif)</h2>
-                    <div class="flex gap-2">
-                        <a :href="googleMapsLink" target="_blank" rel="noopener"
-                            class="text-xs px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white border border-green-600">Buka
-                            di Google Maps</a>
-                    </div>
-                </div>
-                <div class="relative">
-                    <div id="leafletMap" class="w-full rounded-lg overflow-hidden border bg-gray-100"
-                        style="height:340px; min-height:300px; z-index: 1; position: relative;"></div>
-                    <button @click="initLeaflet()"
-                        class="absolute top-2 right-2 text-[10px] px-2 py-1 rounded bg-white/80 hover:bg-white shadow border"
-                        x-show="!leafletInited">Muat Ulang</button>
-                </div>
-                <p class="mt-3 text-xs text-gray-600">Batas poligon desa Geresik dan marker lokasi pusat (estimasi).
-                    Interaktif tanpa API key.</p>
-                <p class="mt-1 text-[10px] text-gray-400">Sumber data: OpenStreetMap & inisialisasi manual.</p>
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="text-center py-6 text-xs text-gray-500">&copy; {{ date('Y') }} Smart Irrigation</footer>
-
-    <!-- Device Detail Modal -->
-    <div x-cloak x-show="showDeviceModal"
-        class="fixed inset-0 z-50 modal-overlay flex items-start md:items-center justify-center p-4 md:p-8 bg-black/40 backdrop-blur-sm"
-        @keydown.escape.window="closeDeviceModal()" style="z-index: 9999 !important;">
-        <div x-show="showDeviceModal" x-transition.opacity x-transition.scale.origin.top
-            class="bg-white w-full max-w-3xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] relative"
-            style="z-index: 10000 !important;">
-            <div class="flex items-start justify-between px-5 py-4 border-b bg-gray-50">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800" x-text="selectedDevice?.device_name || 'Device'">
-                    </h3>
-                    <p class="text-xs text-gray-500" x-text="selectedDevice ? ('ID: '+selectedDevice.device_id) : ''">
-                    </p>
-                </div>
-                <button class="text-gray-500 hover:text-gray-700" @click="closeDeviceModal()">✕</button>
-            </div>
-            <div class="px-5 pt-5 pb-6 overflow-y-auto space-y-8">
-                <!-- Quick stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                        <div class="text-[10px] font-semibold text-gray-500">Suhu</div>
-                        <div class="font-medium" x-text="fmt(selectedDevice?.temperature_c,'°C')"></div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-semibold text-gray-500">Tanah</div>
-                        <div class="font-medium" x-text="fmt(selectedDevice?.soil_moisture_pct,'%')"></div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-semibold text-gray-500">Baterai</div>
-                        <div class="font-medium" x-text="batteryDisplay(selectedDevice)"></div>
-                    </div>
-                    {{-- <div>
-                        <div class="text-[10px] font-semibold text-gray-500">Cahaya</div>
-                        <div class="font-medium" x-text="fmt(selectedDevice?.light_lux,' lx')"></div>
-                    </div> --}}
-                </div>
-
-                <!-- Sessions table -->
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">🚿 Penggunaan Air per
-                        Sesi
-                        <template x-if="loadingDeviceDetail"><span
-                                class="text-xs text-gray-500">(memuat...)</span></template>
-                    </h4>
-                    <template x-if="deviceSessionsSummary">
-                        <div class="text-[11px] text-gray-600 mb-2">
-                            <span x-text="'Total Rencana: ' + fmt(deviceSessionsSummary.total_planned_l,' L')"></span>
-                            <span class="mx-2">|</span>
-                            <span x-text="'Total Aktual: ' + fmt(deviceSessionsSummary.total_actual_l,' L')"></span>
-                            <span class="mx-2">|</span>
-                            <span
-                                x-text="'Efisiensi: ' + (deviceSessionsSummary.efficiency_pct!=null? deviceSessionsSummary.efficiency_pct+'%':'-')"></span>
-                        </div>
-                    </template>
-                    <template x-if="!loadingDeviceDetail && !deviceSessions.length">
-                        <div class="text-xs text-gray-500">Belum ada data sesi untuk device ini.</div>
-                    </template>
-                    <template x-if="deviceSessions.length">
-                        <div class="overflow-x-auto border rounded-md">
-                            <table class="min-w-full text-xs">
-                                <thead class="bg-gray-100 text-gray-600">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left font-medium">Sesi</th>
-                                        <th class="px-3 py-2 text-left font-medium">Waktu</th>
-                                        <th class="px-3 py-2 text-right font-medium">Rencana (L)</th>
-                                        <th class="px-3 py-2 text-right font-medium">Aktual (L)</th>
-                                        <th class="px-3 py-2 text-right font-medium">Efisiensi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template x-for="s in deviceSessions" :key="s.id || s.index">
-                                        <tr class="border-t hover:bg-gray-50">
-                                            <td class="px-3 py-1" x-text="s.index || s.session || '-' "></td>
-                                            <td class="px-3 py-1" x-text="s.time || s.start_time || '-' "></td>
-                                            <td class="px-3 py-1 text-right"
-                                                x-text="s.planned_l ? s.planned_l.toFixed(1) : (s.planned_volume_l?.toFixed(1) || '-')">
-                                            </td>
-                                            <td class="px-3 py-1 text-right"
-                                                x-text="s.actual_l ? s.actual_l.toFixed(1) : (s.actual_volume_l?.toFixed(1) || '-')">
-                                            </td>
-                                            <td class="px-3 py-1 text-right"
-                                                x-text="(s.actual_l && s.planned_l) ? ((s.actual_l / (s.planned_l||1))*100).toFixed(0)+'%' : (s.efficiency_pct ? s.efficiency_pct+'%' : '-')">
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </template>
-                </div>
-
-                <!-- Usage history table -->
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-800 mb-2">📜 Riwayat Penggunaan Air
-                        <template x-if="loadingDeviceDetail"><span
-                                class="text-xs text-gray-500">(memuat...)</span></template>
-                    </h4>
-                    <template x-if="!loadingDeviceDetail && !deviceUsageHistory.length">
-                        <div class="text-xs text-gray-500">Belum ada data penggunaan sebelumnya.</div>
-                    </template>
-                    <template x-if="deviceUsageHistory.length">
-                        <div class="overflow-x-auto border rounded-md">
-                            <table class="min-w-full text-xs">
-                                <thead class="bg-gray-100 text-gray-600">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left font-medium">Tanggal</th>
-                                        <th class="px-3 py-2 text-right font-medium">Total (L)</th>
-                                        <th class="px-3 py-2 text-right font-medium">Sesi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template x-for="h in deviceUsageHistory" :key="h.date || h.id">
-                                        <tr class="border-t hover:bg-gray-50">
-                                            <td class="px-3 py-1" x-text="h.date || h.day || '-' "></td>
-                                            <td class="px-3 py-1 text-right"
-                                                x-text="h.total_l ? h.total_l.toFixed(1) : (h.volume_l?.toFixed(1) || '-')">
-                                            </td>
-                                            <td class="px-3 py-1 text-right"
-                                                x-text="h.sessions || h.session_count || '-' "></td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </template>
-                </div>
-            </div>
-            <div class="px-5 py-3 bg-gray-50 border-t flex justify-end gap-2">
-                <button @click="closeDeviceModal()" class="btn btn-ghost text-xs">Tutup</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
+{{-- Dashboard Alpine.js Function --}}
+<script>
         function dashboard() {
             return {
+                // Language state
+                currentLang: localStorage.getItem('sis_lang') || 'id',
+                translations: {
+                    id: {
+                        // Header
+                        appTitle: 'Irigasi Pintar',
+                        appSubtitle: 'Monitoring & otomasi penyiraman',
+                        switchLang: 'Ganti ke Bahasa Inggris',
+                        refresh: 'Refresh',
+                        loading: 'Memuat',
+                        admin: 'Admin',
+                        login: 'Masuk',
+                        // Weather section
+                        currentTime: 'Waktu Sekarang',
+                        currentDate: 'Tanggal Hari Ini',
+                        currentWeather: 'Cuaca Saat Ini',
+                        forecast: 'Prakiraan',
+                        next24h: '24 Jam',
+                        next7d: 'Minggu',
+                        day: 'Tanggal',
+                        month: 'Bulan',
+                        year: 'Tahun',
+                        humidity: 'Kelembapan',
+                        windSpeed: 'Kecepatan Angin',
+                        pressure: 'Tekanan',
+                        lightPercent: 'cahaya',
+                        // Tasks
+                        activities: 'Aktivitas / Peringatan',
+                        weeklyTasks: 'Tugas Minggu Ini',
+                        upcomingWeek: 'Minggu Ini',
+                        noTasks: 'Tidak ada tugas terjadwal minggu ini',
+                        prevWeek: '‹ Minggu Lalu',
+                        nextWeek: 'Minggu Depan ›',
+                        today: 'Kini butuh',
+                        daysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+                        // Charts
+                        environmentSummary: 'Ringkasan Lingkungan',
+                        lightIntensity: 'Intensitas Cahaya',
+                        waterLevel: 'Ketinggian Air',
+                        soilMoisture: 'Kelembapan Tanah',
+                        temperature: 'Suhu',
+                        airHumidity: 'Kelembapan Udara',
+                        time: 'Waktu',
+                        // Metrics
+                        temp: 'Suhu',
+                        hum: 'Kelembapan Udara',
+                        soil: 'Kelembapan Tanah',
+                        light: 'Cahaya',
+                        rain: 'Hujan',
+                        water: 'Ketinggian Air',
+                        // Devices
+                        devices: 'Perangkat',
+                        allDevices: 'Semua Perangkat',
+                        noDevices: 'Tidak ada data perangkat',
+                        viewDetails: 'Detail',
+                        battery: 'Baterai',
+                        waterUsageToday: 'Pemakaian Hari Ini',
+                        lastUpdate: 'Terakhir',
+                        // Tank
+                        waterTank: 'Tangki Air',
+                        capacity: 'Kapasitas',
+                        currentLevel: 'Level Saat Ini',
+                        status: 'Status',
+                        lastUpdated: 'Terakhir Diperbarui',
+                        todaySchedule: 'Jadwal Hari Ini',
+                        noSchedule: 'Tidak ada jadwal',
+                        // Usage
+                        waterUsageHistory: 'Riwayat Penggunaan Air',
+                        last30Days: '30 Hari Terakhir',
+                        last24Hours: '24 Jam Terakhir',
+                        dailyData30: 'Data harian dalam 30 hari terakhir',
+                        hourlyData24: 'Data per jam dalam 24 jam terakhir',
+                        totalUsage: 'Total',
+                        avgUsage: 'Rata-rata',
+                        peakUsage: 'Puncak',
+                        lowUsage: 'Terendah',
+                        days: 'hari',
+                        noDataYet: 'Belum ada data',
+                        // Location
+                        location: 'Lokasi',
+                        streetView: 'Street View',
+                        villageMap: 'Peta Desa',
+                        close: 'Tutup',
+                        viewFullMap: 'Lihat Peta Lengkap',
+                        // Modal
+                        deviceDetails: 'Detail Perangkat',
+                        sessions: 'Sesi',
+                        usageHistory: 'Riwayat Pemakaian',
+                        noData: 'Tidak ada data',
+                        // Units
+                        celsius: '°C',
+                        percent: '%',
+                        lux: 'lux',
+                        mm: 'mm',
+                        cm: 'cm',
+                        liter: 'L',
+                        kmh: 'km/j',
+                        hPa: 'hPa'
+                    },
+                    en: {
+                        // Header
+                        appTitle: 'Smart Irrigation',
+                        appSubtitle: 'Monitoring & irrigation automation',
+                        switchLang: 'Switch to Indonesian',
+                        refresh: 'Refresh',
+                        loading: 'Loading',
+                        admin: 'Admin',
+                        login: 'Login',
+                        // Weather section
+                        currentTime: 'Current Time',
+                        currentDate: 'Today\'s Date',
+                        currentWeather: 'Current Weather',
+                        forecast: 'Forecast',
+                        next24h: '24 Hours',
+                        next7d: 'Week',
+                        day: 'Day',
+                        month: 'Month',
+                        year: 'Year',
+                        humidity: 'Humidity',
+                        windSpeed: 'Wind Speed',
+                        pressure: 'Pressure',
+                        lightPercent: 'light',
+                        // Tasks
+                        activities: 'Activities / Alerts',
+                        weeklyTasks: 'This Week\'s Tasks',
+                        upcomingWeek: 'This Week',
+                        noTasks: 'No scheduled tasks this week',
+                        prevWeek: '‹ Previous Week',
+                        nextWeek: 'Next Week ›',
+                        today: 'Today need',
+                        daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                        // Charts
+                        environmentSummary: 'Environmental Summary',
+                        lightIntensity: 'Light Intensity',
+                        waterLevel: 'Water Level',
+                        soilMoisture: 'Soil Moisture',
+                        temperature: 'Temperature',
+                        airHumidity: 'Air Humidity',
+                        time: 'Time',
+                        // Metrics
+                        temp: 'Temperature',
+                        hum: 'Air Humidity',
+                        soil: 'Soil Moisture',
+                        light: 'Light',
+                        rain: 'Rain',
+                        water: 'Water Level',
+                        // Devices
+                        devices: 'Devices',
+                        allDevices: 'All Devices',
+                        noDevices: 'No device data',
+                        viewDetails: 'Details',
+                        battery: 'Battery',
+                        waterUsageToday: 'Today\'s Usage',
+                        lastUpdate: 'Last',
+                        // Tank
+                        waterTank: 'Water Tank',
+                        capacity: 'Capacity',
+                        currentLevel: 'Current Level',
+                        status: 'Status',
+                        lastUpdated: 'Last Updated',
+                        todaySchedule: 'Today\'s Schedule',
+                        noSchedule: 'No schedule',
+                        // Usage
+                        waterUsageHistory: 'Water Usage History',
+                        last30Days: 'Last 30 Days',
+                        last24Hours: 'Last 24 Hours',
+                        dailyData30: 'Daily data for the last 30 days',
+                        hourlyData24: 'Hourly data for the last 24 hours',
+                        totalUsage: 'Total',
+                        avgUsage: 'Average',
+                        peakUsage: 'Peak',
+                        lowUsage: 'Lowest',
+                        days: 'days',
+                        noDataYet: 'No data yet',
+                        // Location
+                        location: 'Location',
+                        streetView: 'Street View',
+                        villageMap: 'Village Map',
+                        close: 'Close',
+                        viewFullMap: 'View Full Map',
+                        // Modal
+                        deviceDetails: 'Device Details',
+                        sessions: 'Sessions',
+                        usageHistory: 'Usage History',
+                        noData: 'No data',
+                        // Units
+                        celsius: '°C',
+                        percent: '%',
+                        lux: 'lux',
+                        mm: 'mm',
+                        cm: 'cm',
+                        liter: 'L',
+                        kmh: 'km/h',
+                        hPa: 'hPa'
+                    }
+                },
                 darkMode: localStorage.getItem('sis_dark') === '1',
                 loadingAll: false,
                 loadingDevices: false,
@@ -1471,6 +456,52 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         document.documentElement.classList.remove('dark');
                     }
                 },
+                // Language Methods
+                t(key) {
+                    return this.translations[this.currentLang][key] || key;
+                },
+                toggleLanguage() {
+                    this.currentLang = this.currentLang === 'id' ? 'en' : 'id';
+                    localStorage.setItem('sis_lang', this.currentLang);
+                    // Update page title
+                    document.title = this.t('appTitle');
+                    // Re-render charts with new language
+                    this.updateChartLanguage();
+                },
+                updateChartLanguage() {
+                    // Update chart axis labels
+                    if (this.lightIntensityChart) {
+                        this.lightIntensityChart.options.scales.x.title.text = this.t('time');
+                        this.lightIntensityChart.options.scales.y.title.text = `${this.t('lightIntensity')} (${this.t('lux')})`;
+                        this.lightIntensityChart.update('none');
+                    }
+                    if (this.waterLevelChart) {
+                        this.waterLevelChart.options.scales.x.title.text = this.t('time');
+                        this.waterLevelChart.options.scales.y.title.text = `${this.t('waterLevel')} (${this.t('cm')})`;
+                        this.waterLevelChart.update('none');
+                    }
+                    if (this.soilMoistureChart) {
+                        this.soilMoistureChart.options.scales.x.title.text = this.t('time');
+                        this.soilMoistureChart.options.scales.y.title.text = `${this.t('soilMoisture')} (${this.t('percent')})`;
+                        this.soilMoistureChart.update('none');
+                    }
+                    if (this.temperatureChart) {
+                        this.temperatureChart.options.scales.x.title.text = this.t('time');
+                        this.temperatureChart.options.scales.y.title.text = `${this.t('temperature')} (${this.t('celsius')})`;
+                        this.temperatureChart.update('none');
+                    }
+                    if (this.humidityChart) {
+                        this.humidityChart.options.scales.x.title.text = this.t('time');
+                        this.humidityChart.options.scales.y.title.text = `${this.t('airHumidity')} (${this.t('percent')})`;
+                        this.humidityChart.update('none');
+                    }
+                    if (this.usageChart) {
+                        this.usageChart.update('none');
+                    }
+                    if (this.usageChart24h) {
+                        this.usageChart24h.update('none');
+                    }
+                },
                 // Location section (no dynamic state needed after refactor)
                 showFullMap: false,
                 leafletInited: false,
@@ -1498,41 +529,47 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     this.darkMode = !this.darkMode;
                     this.persistDark();
                 },
-                metricBy(k) {
-                    return this.topMetricCards.find(m => m.key === k);
+                metricBy(metricKey) {
+                    return this.topMetricCards.find(metric => metric.key === metricKey);
                 },
                 updateMetric(key, val, desc = '') {
-                    const m = this.metricBy(key);
-                    if (!m) return;
+                    const metric = this.metricBy(key);
+                    if (!metric) return;
                     if (val == null || isNaN(parseFloat(val))) return; // ignore invalid
-                    m.value = parseFloat(val);
-                    if (m.type === 'plain') {
-                        m.display = m.value.toFixed(0); // just integer count
+                    
+                    const newValue = parseFloat(val);
+                    
+                    // Prevent unnecessary updates that trigger reactivity
+                    if (metric.value === newValue && metric.desc === desc) return;
+                    
+                    metric.value = newValue;
+                    if (metric.type === 'plain') {
+                        metric.display = metric.value.toFixed(0); // just integer count
                     } else {
-                        m.display = (m.type === 'gauge' && m.unit === '%') ? Math.round(m.value) + m.unit : (m.value
-                            .toFixed ? m.value.toFixed((m.unit === '%' || m.max <= 20) ? 0 : 1) : m.value) + m.unit;
+                        metric.display = (metric.type === 'gauge' && metric.unit === '%') ? Math.round(metric.value) + metric.unit : (metric.value
+                            .toFixed ? metric.value.toFixed((metric.unit === '%' || metric.max <= 20) ? 0 : 1) : metric.value) + metric.unit;
                     }
-                    m.desc = desc;
-                    m.pct = this.normalizePct(m.value, m.min, m.max);
-                    m.color = this.colorFor(m.pct);
+                    metric.desc = desc;
+                    metric.pct = this.normalizePct(metric.value, metric.min, metric.max);
+                    metric.color = this.colorFor(metric.pct);
                     // snapshot for tooltip (store first capture per minute)
-                    this.metricSnapshots[m.key] = {
-                        value: m.display,
+                    this.metricSnapshots[metric.key] = {
+                        value: metric.display,
                         ts: new Date()
                     };
                 },
-                normalizePct(v, min, max) {
-                    if (v == null) return 0;
-                    const clamped = Math.max(min, Math.min(max, v));
+                normalizePct(value, min, max) {
+                    if (value == null) return 0;
+                    const clamped = Math.max(min, Math.min(max, value));
                     return ((clamped - min) / (max - min)) * 100;
                 },
                 colorFor(pct) {
                     // 0 red -> 50 orange -> 100 green
-                    const h = (pct * 120) / 100; // 0=red 120=green
-                    return `hsl(${h}, 70%, 45%)`;
+                    const hue = (pct * 120) / 100; // 0=red 120=green
+                    return `hsl(${hue}, 70%, 45%)`;
                 },
-                gaugeStyle(m) {
-                    return `background: conic-gradient(${m.color} 0% ${m.pct}%, #e5e7eb ${m.pct}% 100%);`;
+                gaugeStyle(metric) {
+                    return `background: conic-gradient(${metric.color} 0% ${metric.pct}%, #e5e7eb ${metric.pct}% 100%);`;
                 },
                 metricIcon(key) {
                     const base = 'stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"';
@@ -1617,44 +654,110 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     // Temperature
                     let temp = this.weatherSummary?.temp;
                     if ((temp == null || temp === '-') && this.devices.length) {
-                        const tVals = this.devices.map(d => d.temperature_c).filter(v => v != null);
-                        if (tVals.length) temp = tVals.reduce((a, b) => a + b, 0) / tVals.length;
+                        const tempValues = this.devices.map(device => device.temperature_c).filter(value => value != null);
+                        if (tempValues.length) temp = tempValues.reduce((accumulator, current) => accumulator + current, 0) / tempValues.length;
                     }
                     if (temp != null && temp !== '-') this.updateMetric('temp', parseFloat(temp), 'now');
+                    
                     // Humidity
                     const hum = this.weatherSummary?.humidity;
                     if (hum != null && hum !== '-') this.updateMetric('humidity', parseFloat(hum), 'BMKG');
-                    // Light
-                    const light = this.weatherSummary?.light_pct;
-                    if (light != null) this.updateMetric('light', parseFloat(light), 'estimasi');
-                    // Wind
-                    const ws = this.weatherSummary?.wind_speed;
-                    if (ws != null && ws !== '-') this.updateMetric('wind', parseFloat(ws), this.weatherSummary?.wind_dir ||
-                        '');
-                    // Rain
-                    if (this.weatherSummary?.rain != null) this.updateMetric('rain', parseFloat(this.weatherSummary.rain),
-                        'current');
-                    // Tank
-                    if (this.tank?.percentage != null) this.updateMetric('tank', parseFloat(this.tank.percentage), 'level');
-                    // Battery average
-                    if (this.devices.length) {
-                        const pcts = this.devices.map(d => {
-                            if (d.battery_voltage_v == null) return null;
-                            const v = parseFloat(d.battery_voltage_v);
-                            if (isNaN(v)) return null;
-                            return Math.max(0, Math.min(100, ((v - 3.3) / (4.2 - 3.3)) * 100));
-                        }).filter(v => v != null);
-                        if (pcts.length) {
-                            const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
-                            this.updateMetric('battery', avg, pcts.length + ' node');
+                    
+                    // Light - Multiple fallback strategies
+                    let light = null;
+                    let lightSource = 'estimasi';
+                    
+                    // Priority 1: From weather summary
+                    if (this.weatherSummary?.light_pct != null) {
+                        light = parseFloat(this.weatherSummary.light_pct);
+                        lightSource = 'BMKG';
+                    }
+                    // Priority 2: Calculate from cloud cover (tcc)
+                    else if (this.weatherSummary?.tcc != null) {
+                        const tcc = parseFloat(this.weatherSummary.tcc);
+                        if (!isNaN(tcc)) {
+                            light = Math.max(0, Math.min(100, 100 - tcc));
+                            lightSource = 'cloud';
                         }
                     }
+                    // Priority 3: From device sensors
+                    else if (this.devices.length) {
+                        const luxValues = this.devices.map(device => device.light_lux).filter(value => value != null && value > 0);
+                        if (luxValues.length) {
+                            const avgLux = luxValues.reduce((accumulator, current) => accumulator + current, 0) / luxValues.length;
+                            light = Math.min(100, (avgLux / 12000) * 100);
+                            lightSource = 'sensor';
+                        }
+                    }
+                    
+                    // Priority 4: Time-based estimation
+                    if (light == null) {
+                        const hour = new Date().getHours();
+                        if (hour >= 6 && hour <= 18) {
+                            const progress = (hour - 6) / 12;
+                            light = Math.sin(progress * Math.PI) * 75 + 25;
+                        } else {
+                            light = 5;
+                        }
+                        lightSource = 'waktu';
+                    }
+                    
+                    if (light != null) this.updateMetric('light', Math.round(light), lightSource);
+                    
+                    // Wind
+                    const ws = this.weatherSummary?.wind_speed;
+                    if (ws != null && ws !== '-') {
+                        this.updateMetric('wind', parseFloat(ws), this.weatherSummary?.wind_dir || '');
+                    }
+                    
+                    // Rain - Multiple sources with fallback
+                    let rain = null;
+                    let rainDesc = 'tidak ada';
+                    
+                    // Priority 1: From weather summary
+                    if (this.weatherSummary?.rain != null) {
+                        rain = parseFloat(this.weatherSummary.rain);
+                    }
+                    // Priority 2: From first forecast entry
+                    else if (this.forecastEntries && this.forecastEntries.length > 0) {
+                        const firstForecast = this.forecastEntries[0];
+                        if (firstForecast?.rain != null) {
+                            rain = parseFloat(firstForecast.rain);
+                        }
+                    }
+                    
+                    // Default to 0 if no data (means no rain)
+                    if (rain == null) rain = 0;
+                    
+                    // Set description
+                    if (rain > 0) {
+                        rainDesc = rain > 5 ? 'lebat' : 'ringan';
+                    }
+                    
+                    this.updateMetric('rain', rain, rainDesc);
+                    
+                    // Tank
+                    if (this.tank?.percentage != null) this.updateMetric('tank', parseFloat(this.tank.percentage), 'level');
+                    
+                    // Battery average
+                    if (this.devices.length) {
+                        const batteryPercentages = this.devices.map(device => {
+                            if (device.battery_voltage_v == null) return null;
+                            const voltage = parseFloat(device.battery_voltage_v);
+                            if (isNaN(voltage)) return null;
+                            return Math.max(0, Math.min(100, ((voltage - 3.3) / (4.2 - 3.3)) * 100));
+                        }).filter(percentage => percentage != null);
+                        if (batteryPercentages.length) {
+                            const avgBattery = batteryPercentages.reduce((accumulator, current) => accumulator + current, 0) / batteryPercentages.length;
+                            this.updateMetric('battery', avgBattery, batteryPercentages.length + ' node');
+                        }
+                    }
+                    
                     // Devices count
                     this.updateMetric('devices', this.devices.length, 'online');
+                    
                     // After metrics update ensure tooltips dataset refreshed
                     this.refreshMetricTooltips();
-                    // Update environmental charts with latest data
-                    this.updateEnvironmentalCharts();
                 },
                 // Environmental Charts Methods
                 generateSampleChartData() {
@@ -1678,8 +781,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         // Light intensity data (simulasi pola siang hari)
                         const progress = i / dataPoints;
                         const lightBase = Math.sin(progress * Math.PI) * 10000 + 2000; // 2000-12000 lux
-                        const li1 = Math.round(lightBase + Math.random() * 500);
-                        const li2 = Math.round(lightBase * 0.95 + Math.random() * 500);
+                        const lightIntensity1 = Math.round(lightBase + Math.random() * 500);
+                        const lightIntensity2 = Math.round(lightBase * 0.95 + Math.random() * 500);
                         
                         // Water level data (simulasi level yang stabil dengan variasi kecil)
                         const waterBase = 135; // cm
@@ -1695,19 +798,19 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         // Temperature data (pola menurun seperti sore hari)
                         const tempBase1 = 33 - (progress * 8); // T1: 33 -> 25°C
                         const tempBase2 = 27 - (progress * 3); // T2: 27 -> 24°C
-                        const t1 = tempBase1 + Math.random() * 0.5;
-                        const t2 = tempBase2 + Math.random() * 0.5;
+                        const temperature1 = tempBase1 + Math.random() * 0.5;
+                        const temperature2 = tempBase2 + Math.random() * 0.5;
                         
                         // Humidity data (pola meningkat seperti sore hari)
                         const humBase1 = 35 + (progress * 13); // H1: 35 -> 48%
                         const humBase2 = 54 + (progress * 5);  // H2: 54 -> 59%
-                        const h1 = humBase1 + Math.random() * 2;
-                        const h2 = humBase2 + Math.random() * 2;
+                        const humidity1 = humBase1 + Math.random() * 2;
+                        const humidity2 = humBase2 + Math.random() * 2;
                         
                         // Tambahkan ke data arrays
                         this.lightIntensityData.labels.push(timeLabel);
-                        this.lightIntensityData.li1.push(li1);
-                        this.lightIntensityData.li2.push(li2);
+                        this.lightIntensityData.li1.push(lightIntensity1);
+                        this.lightIntensityData.li2.push(lightIntensity2);
                         
                         this.waterLevelData.labels.push(timeLabel);
                         this.waterLevelData.levels.push(parseFloat(waterLevel.toFixed(1)));
@@ -1715,12 +818,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         this.soilMoistureData.labels.push(timeLabel);
                         
                         this.temperatureData.labels.push(timeLabel);
-                        this.temperatureData.t1.push(parseFloat(t1.toFixed(1)));
-                        this.temperatureData.t2.push(parseFloat(t2.toFixed(1)));
+                        this.temperatureData.t1.push(parseFloat(temperature1.toFixed(1)));
+                        this.temperatureData.t2.push(parseFloat(temperature2.toFixed(1)));
                         
                         this.humidityData.labels.push(timeLabel);
-                        this.humidityData.h1.push(parseFloat(h1.toFixed(1)));
-                        this.humidityData.h2.push(parseFloat(h2.toFixed(1)));
+                        this.humidityData.h1.push(parseFloat(humidity1.toFixed(1)));
+                        this.humidityData.h2.push(parseFloat(humidity2.toFixed(1)));
                     }
                     
                     console.log('Sample data generated:', {
@@ -1788,6 +891,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 scales: {
                                     x: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1811,6 +924,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     },
                                     y: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: this.t('lightIntensity') + ' (' + this.t('lux') + ')',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1885,6 +1008,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 scales: {
                                     x: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1908,6 +1041,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     },
                                     y: {
                                         display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Ketinggian Air (cm)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: {
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1977,6 +1120,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -1993,6 +1146,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Kelembapan Tanah (%)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2056,6 +1219,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2072,6 +1245,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Suhu (°C)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2136,6 +1319,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 },
                                 scales: {
                                     x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Waktu',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {top: 10, bottom: 0}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2152,6 +1345,16 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                         }
                                     },
                                     y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Kelembapan Udara (%)',
+                                            color: '#374151',
+                                            font: {
+                                                size: 12,
+                                                weight: '600'
+                                            },
+                                            padding: {bottom: 10}
+                                        },
                                         grid: { 
                                             color: 'rgba(0, 0, 0, 0.1)',
                                             drawBorder: true,
@@ -2321,8 +1524,8 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     // Attach title attribute dynamically to overlay chips (executed after DOM paint)
                     this.$nextTick(() => {
                         document.querySelectorAll('[data-metric-chip]').forEach(el => {
-                            const k = el.getAttribute('data-metric-chip');
-                            const snap = this.metricSnapshots[k];
+                            const metricKey = el.getAttribute('data-metric-chip');
+                            const snap = this.metricSnapshots[metricKey];
                             if (snap) {
                                 el.title =
                                     `${snap.value} • ${snap.ts.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}`;
@@ -2395,36 +1598,37 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadDevices() {
                     this.loadingDevices = true;
+                    this.fetchError = false;
                     try {
-                        const r = await fetch('/api/sensor-readings/latest-per-device');
-                        const j = await r.json();
-                        if (!r.ok) throw new Error(j.message || 'err');
-                        this.devices = (j.data || []).map(x => ({
-                            id: x.device_id,
-                            device_id: x.device_id,
-                            device_name: x.device_name || x.device_id,
+                        const response = await fetch('/api/sensor-readings/latest-per-device');
+                        const jsonData = await response.json();
+                        if (!response.ok) throw new Error(jsonData.message || 'err');
+                        this.devices = (jsonData.data || []).map(device => ({
+                            id: device.device_id,
+                            device_id: device.device_id,
+                            device_name: device.device_name || device.device_id,
                             // Sensor data
-                            temperature_c: x.temperature_c ?? x.ground_temperature_c ?? x.temperature,
-                            ground_temperature_c: x.ground_temperature_c ?? x.temperature_c,
-                            soil_moisture_pct: x.soil_moisture_pct ?? x.soil_moisture,
-                            battery_voltage_v: x.battery_voltage_v,
-                            light_lux: x.light_lux,
-                            water_height_cm: x.water_height_cm,
-                            irrigation_usage_total_l: x.irrigation_usage_total_l,
-                            ina226_power_mw: x.ina226_power_mw,
+                            temperature_c: device.temperature_c ?? device.ground_temperature_c ?? device.temperature,
+                            ground_temperature_c: device.ground_temperature_c ?? device.temperature_c,
+                            soil_moisture_pct: device.soil_moisture_pct ?? device.soil_moisture,
+                            battery_voltage_v: device.battery_voltage_v,
+                            light_lux: device.light_lux,
+                            water_height_cm: device.water_height_cm,
+                            irrigation_usage_total_l: device.irrigation_usage_total_l,
+                            ina226_power_mw: device.ina226_power_mw,
                             // Device status
-                            connection_state: x.connection_state || 'offline',
-                            valve_state: x.valve_state || 'closed',
-                            is_active: x.is_active,
-                            location: x.location || '',
+                            connection_state: device.connection_state || 'offline',
+                            valve_state: device.valve_state || 'closed',
+                            is_active: device.is_active,
+                            location: device.location || '',
                             // Metadata
-                            recorded_at: x.recorded_at,
-                            status: x.status || 'normal',
-                            water_usage_today_l: x.water_usage_today_l ? parseFloat(x.water_usage_today_l) : null
+                            recorded_at: device.recorded_at,
+                            status: device.status || 'normal',
+                            water_usage_today_l: device.water_usage_today_l ? parseFloat(device.water_usage_today_l) : null
                         }));
                         this.computeTopMetrics();
-                    } catch (e) {
-                        console.error('Device fetch error', e);
+                    } catch (error) {
+                        console.error('Device fetch error', error);
                         this.fetchError = true;
                     } finally {
                         this.loadingDevices = false;
@@ -2472,18 +1676,18 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadTank() {
                     try {
-                        const r = await fetch('/api/water-storage');
-                        const j = await r.json();
-                        if (!r.ok) throw new Error();
-                        const t = (j.data || [])[0];
-                        if (t) {
+                        const response = await fetch('/api/water-storage');
+                        const jsonData = await response.json();
+                        if (!response.ok) throw new Error();
+                        const tankData = (jsonData.data || [])[0];
+                        if (tankData) {
                             this.tank = {
-                                id: t.id,
-                                tank_name: t.tank_name || t.name || 'Tangki Air',
-                                current_volume_liters: parseFloat(t.current_volume_liters || t.current_volume || 0),
-                                capacity_liters: parseFloat(t.capacity_liters || t.total_capacity || 0),
-                                percentage: parseFloat(t.percentage || 0),
-                                status: t.status || 'normal'
+                                id: tankData.id,
+                                tank_name: tankData.tank_name || tankData.name || 'Tangki Air',
+                                current_volume_liters: parseFloat(tankData.current_volume_liters || tankData.current_volume || 0),
+                                capacity_liters: parseFloat(tankData.capacity_liters || tankData.total_capacity || 0),
+                                percentage: parseFloat(tankData.percentage || 0),
+                                status: tankData.status || 'normal'
                             };
                             this.tankUpdatedAt = new Date().toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
@@ -2498,11 +1702,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadPlan() {
                     try {
-                        const r = await fetch('/api/irrigation/today-plan');
-                        const j = await r.json();
-                        if (!r.ok) throw new Error();
-                        if (j.data) {
-                            this.plan = j.data;
+                        const response = await fetch('/api/irrigation/today-plan');
+                        const jsonData = await response.json();
+                        if (!response.ok) throw new Error();
+                        if (jsonData.data) {
+                            this.plan = jsonData.data;
                             // Plan currently not represented as metric gauge; could be added later
                             this.buildTasks();
                         }
@@ -2513,19 +1717,19 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadUsage() {
                     try {
-                        const r = await fetch('/api/water-storage/daily-usage');
-                        const j = await r.json();
-                        if (!r.ok) throw new Error();
+                        const response = await fetch('/api/water-storage/daily-usage');
+                        const jsonData = await response.json();
+                        if (!response.ok) throw new Error();
                         // ✅ Convert to plain array BEFORE assigning to Alpine
-                        const rawData = j.data || [];
+                        const rawData = jsonData.data || [];
                         this.usage = rawData.map(item => ({
                             date: item.date || item.usage_date,
                             usage_date: item.usage_date || item.date,
                             total_l: parseFloat(item.total_l) || 0
                         }));
                         this.renderUsageChart30d();
-                    } catch (e) {
-                        console.error('Usage fetch error', e);
+                    } catch (error) {
+                        console.error('Usage fetch error', error);
                         // Fallback with mock data for demo
                         this.usage = this.generateMock30dData();
                         this.renderUsageChart30d();
@@ -2533,19 +1737,19 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 async loadUsageDaily() {
                     try {
-                        const r = await fetch('/api/water-storage/hourly-usage');
-                        const j = await r.json();
-                        if (!r.ok) throw new Error();
+                        const response = await fetch('/api/water-storage/hourly-usage');
+                        const jsonData = await response.json();
+                        if (!response.ok) throw new Error();
                         // ✅ Convert to plain array BEFORE assigning to Alpine
-                        const rawData = j.data || [];
+                        const rawData = jsonData.data || [];
                         this.usage24h = rawData.map(item => ({
                             hour: item.hour,
                             total_l: parseFloat(item.total_l) || 0,
                             datetime: item.datetime
                         }));
                         this.renderUsageChart24h();
-                    } catch (e) {
-                        console.error('24h Usage fetch error', e);
+                    } catch (error) {
+                        console.error('24h Usage fetch error', error);
                         // Fallback with mock data for demo
                         this.usage24h = this.generateMock24hData();
                         this.renderUsageChart24h();
@@ -2595,33 +1799,46 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     if (this.loadingAll && !force) return;
                     this.loadingAll = true;
                     this.fetchError = false;
-                    await Promise.all([this.loadDevices(), this.loadTank(), this.loadPlan(), this.loadUsage(), this
-                        .loadUsageDaily()
-                    ]);
-                    // After core data loaded, derive light & wind and fetch weather
-                    this.computeLightWindFromDevices();
-                    this.loadEnvStats();
-                    this.lastUpdated = new Date();
-                    this.computeTopMetrics();
-                    this.loadingAll = false;
+                    
+                    try {
+                        await Promise.all([
+                            this.loadDevices(),
+                            this.loadTank(),
+                            this.loadPlan(),
+                            this.loadUsage(),
+                            this.loadUsageDaily()
+                        ]);
+                        
+                        // After core data loaded, derive light & wind and fetch weather
+                        this.computeLightWindFromDevices();
+                        this.loadEnvStats();
+                        this.lastUpdated = new Date();
+                        this.computeTopMetrics();
+                        this.updateEnvironmentalCharts();
+                    } catch (error) {
+                        console.error('Load all error:', error);
+                        this.fetchError = true;
+                    } finally {
+                        this.loadingAll = false;
+                    }
                 },
                 computeLightWindFromDevices() {
                     if (!this.devices.length) return;
-                    const luxVals = this.devices.map(d => d.light_lux).filter(v => v != null);
-                    const windVals = this.devices.map(d => d.wind_speed_ms).filter(v => v != null);
-                    if (luxVals.length) {
-                        const avgLux = Math.round(luxVals.reduce((a, b) => a + b, 0) / luxVals.length);
-                        this.updateMetric('light', avgLux, `avg ${luxVals.length}`);
+                    const luxValues = this.devices.map(device => device.light_lux).filter(value => value != null);
+                    const windValues = this.devices.map(device => device.wind_speed_ms).filter(value => value != null);
+                    if (luxValues.length) {
+                        const avgLux = Math.round(luxValues.reduce((accumulator, current) => accumulator + current, 0) / luxValues.length);
+                        this.updateMetric('light', avgLux, `avg ${luxValues.length}`);
                     }
-                    if (windVals.length) {
-                        const maxWind = Math.max(...windVals);
+                    if (windValues.length) {
+                        const maxWind = Math.max(...windValues);
                         this.updateMetric('wind', (Math.round(maxWind * 10) / 10), 'max');
                     }
                 },
                 loadEnvStats() {
                     // Attempt backend proxy (recommended to implement) else fallback direct
                     fetch('/api/bmkg/forecast')
-                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(response => response.ok ? response.json() : Promise.reject())
                         .then(data => {
                             let first = null;
                             let entries = [];
@@ -2635,13 +1852,13 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         })
                         .catch(() => {
                             fetch('https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=32.08.10.2001')
-                                .then(r => r.json())
+                                .then(response => response.json())
                                 .then(raw => {
                                     try {
                                         const blocks = raw?.data?.[0]?.cuaca;
                                         if (Array.isArray(blocks)) {
                                             const flat = [];
-                                            blocks.forEach(b => Array.isArray(b) && b.forEach(e => flat.push(e)));
+                                            blocks.forEach(block => Array.isArray(block) && block.forEach(entry => flat.push(entry)));
                                             flat.sort((a, b) => new Date(a.local_datetime) - new Date(b
                                                 .local_datetime));
                                             if (flat.length) {
@@ -2657,33 +1874,33 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 processForecast(list) {
                     // Normalize & store
-                    this.forecastEntries = list.map(e => ({
-                        local_datetime: e.local_datetime || e.datetime || null,
-                        temp: e.t ?? e.temperature_c,
-                        humidity: e.humidity ?? e.hu ?? e.h,
-                        rain: e.rain ?? e.tp ?? null,
-                        label: this.translateWeather(e.weather_desc || e.weather_desc_en || e.weather_desc_id ||
-                            e.weather),
-                        icon: e.weather_icon || e.image || null,
-                        wind_speed: e.wind_speed_ms ?? e.ws ?? null,
-                        wind_dir: e.wind_dir_cardinal || e.wd || null,
-                        tcc: e.tcc ?? null
-                    })).filter(e => e.local_datetime);
+                    this.forecastEntries = list.map(entry => ({
+                        local_datetime: entry.local_datetime || entry.datetime || null,
+                        temp: entry.t ?? entry.temperature_c,
+                        humidity: entry.humidity ?? entry.hu ?? entry.h,
+                        rain: entry.rain ?? entry.tp ?? null,
+                        label: this.translateWeather(entry.weather_desc || entry.weather_desc_en || entry.weather_desc_id ||
+                            entry.weather),
+                        icon: entry.weather_icon || entry.image || null,
+                        wind_speed: entry.wind_speed_ms ?? entry.ws ?? null,
+                        wind_dir: entry.wind_dir_cardinal || entry.wd || null,
+                        tcc: entry.tcc ?? null
+                    })).filter(entry => entry.local_datetime);
                     // 24h slice
                     const now = Date.now();
-                    this.forecast24h = this.forecastEntries.filter(e => new Date(e.local_datetime) - now < 24 * 3600 * 1000)
-                        .slice(0, 12).map(e => ({
-                            ...e,
-                            hour: new Date(e.local_datetime).toLocaleTimeString('id-ID', {
+                    this.forecast24h = this.forecastEntries.filter(entry => new Date(entry.local_datetime) - now < 24 * 3600 * 1000)
+                        .slice(0, 12).map(entry => ({
+                            ...entry,
+                            hour: new Date(entry.local_datetime).toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
                                 minute: '2-digit'
                             })
                         }));
                     // Weekly group (by date)
                     const map = {};
-                    this.forecastEntries.forEach(e => {
-                        const d = new Date(e.local_datetime);
-                        const key = d.toISOString().substring(0, 10);
+                    this.forecastEntries.forEach(entry => {
+                        const date = new Date(entry.local_datetime);
+                        const key = date.toISOString().substring(0, 10);
                         if (!map[key]) map[key] = {
                             temps: [],
                             rains: [],
@@ -2691,24 +1908,24 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             labels: [],
                             date: key
                         };
-                        map[key].temps.push(e.temp);
-                        if (e.rain != null) map[key].rains.push(e.rain);
-                        if (e.icon) map[key].icons.push(e.icon);
-                        if (e.label) map[key].labels.push(e.label);
+                        map[key].temps.push(entry.temp);
+                        if (entry.rain != null) map[key].rains.push(entry.rain);
+                        if (entry.icon) map[key].icons.push(entry.icon);
+                        if (entry.label) map[key].labels.push(entry.label);
                     });
-                    this.forecastWeekly = Object.values(map).slice(0, 7).map(g => {
-                        const dt = new Date(g.date + 'T00:00:00');
+                    this.forecastWeekly = Object.values(map).slice(0, 7).map(group => {
+                        const dateTime = new Date(group.date + 'T00:00:00');
                         return {
-                            date: g.date,
-                            day: dt.toLocaleDateString('id-ID', {
+                            date: group.date,
+                            day: dateTime.toLocaleDateString('id-ID', {
                                 weekday: 'long'
                             }),
-                            min: Math.min(...g.temps),
-                            max: Math.max(...g.temps),
-                            rain: g.rains.length ? (Math.round((g.rains.reduce((a, b) => a + b, 0)) * 10) / 10) :
+                            min: Math.min(...group.temps),
+                            max: Math.max(...group.temps),
+                            rain: group.rains.length ? (Math.round((group.rains.reduce((accumulator, current) => accumulator + current, 0)) * 10) / 10) :
                                 null,
-                            icon: g.icons[0] || null,
-                            label: g.labels[0] || ''
+                            icon: group.icons[0] || null,
+                            label: group.labels[0] || ''
                         };
                     });
                     // Build summary for today
@@ -2717,14 +1934,31 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         const todayEntries = this.forecastEntries.filter(e => e.local_datetime.startsWith(today));
                         const temps = todayEntries.map(e => e.temp).filter(v => v != null);
                         const first = this.forecastEntries[0];
+                        
+                        // Calculate light_pct with fallback
+                        let lightPct = null;
+                        if (first?.tcc != null) {
+                            lightPct = Math.max(0, Math.min(100, 100 - first.tcc));
+                        } else {
+                            // Time-based fallback
+                            const hour = new Date().getHours();
+                            if (hour >= 6 && hour <= 18) {
+                                const progress = (hour - 6) / 12;
+                                lightPct = Math.sin(progress * Math.PI) * 75 + 25;
+                            } else {
+                                lightPct = 5;
+                            }
+                        }
+                        
                         this.weatherSummary = {
                             temp: first?.temp ?? '-',
                             label: first?.label || '-',
                             humidity: first?.humidity ?? '-',
                             wind_speed: first?.wind_speed ?? '-',
                             wind_dir: first?.wind_dir ?? '',
-                            rain: first?.rain ?? null,
-                            light_pct: first?.tcc != null ? Math.max(0, Math.min(100, 100 - first.tcc)) : null,
+                            rain: first?.rain ?? 0,
+                            light_pct: lightPct,
+                            tcc: first?.tcc,
                             icon: first?.icon || null,
                             time: first?.local_datetime ? new Date(first.local_datetime).toLocaleTimeString('id-ID', {
                                 hour: '2-digit',
@@ -2733,6 +1967,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             temp_min: temps.length ? Math.min(...temps) : null,
                             temp_max: temps.length ? Math.max(...temps) : null
                         };
+                        
+                        console.log('Weather summary built:', {
+                            temp: this.weatherSummary.temp,
+                            rain: this.weatherSummary.rain,
+                            light_pct: this.weatherSummary.light_pct
+                        });
                     }
                     this.buildCalendar();
                     this.buildWeekView();
@@ -2749,20 +1989,20 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     const result = [];
                     for (let i = 0; i < totalCells; i++) {
                         const dayNum = i - prevMonthDays + 1;
-                        const d = new Date(year, month, dayNum);
+                        const date = new Date(year, month, dayNum);
                         const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth;
-                        const iso = d.toISOString().substring(0, 10);
-                        const fEntries = this.forecastEntries.filter(e => e.local_datetime.startsWith(iso));
-                        const temps = fEntries.map(e => e.temp).filter(v => v != null);
-                        const rainVals = fEntries.map(e => e.rain).filter(v => v != null);
-                        const rainSum = rainVals.length ? Math.round(rainVals.reduce((a, b) => a + b, 0) * 10) / 10 : null;
-                        const icon = fEntries.find(e => e.icon)?.icon || null;
-                        const label = fEntries.find(e => e.label)?.label || '';
-                        const usageForDay = this.usage.find(u => u.date === iso || u.day === iso);
+                        const iso = date.toISOString().substring(0, 10);
+                        const fEntries = this.forecastEntries.filter(entry => entry.local_datetime.startsWith(iso));
+                        const temps = fEntries.map(entry => entry.temp).filter(value => value != null);
+                        const rainValues = fEntries.map(entry => entry.rain).filter(value => value != null);
+                        const rainSum = rainValues.length ? Math.round(rainValues.reduce((accumulator, current) => accumulator + current, 0) * 10) / 10 : null;
+                        const icon = fEntries.find(entry => entry.icon)?.icon || null;
+                        const label = fEntries.find(entry => entry.label)?.label || '';
+                        const usageForDay = this.usage.find(usage => usage.date === iso || usage.day === iso);
                         result.push({
                             key: iso,
                             date: iso,
-                            day: d.getDate(),
+                            day: date.getDate(),
                             isCurrentMonth,
                             icon,
                             label,
@@ -2784,25 +2024,25 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                         7));
                     const days = [];
                     for (let i = 0; i < 7; i++) {
-                        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-                        const iso = d.toISOString().substring(0, 10);
-                        const fEntries = this.forecastEntries.filter(e => e.local_datetime.startsWith(iso));
+                        const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+                        const iso = date.toISOString().substring(0, 10);
+                        const fEntries = this.forecastEntries.filter(entry => entry.local_datetime.startsWith(iso));
                         let avgTemp = '-';
                         let forecastIcon = null;
                         let forecastLabel = '';
                         let category = 'idle';
                         let style = this.categoryStyles['idle'];
                         if (fEntries.length) {
-                            const temps = fEntries.map(e => e.temp).filter(v => v != null);
-                            if (temps.length) avgTemp = Math.round(temps.reduce((a, b) => a + b, 0) / temps.length);
+                            const temps = fEntries.map(entry => entry.temp).filter(value => value != null);
+                            if (temps.length) avgTemp = Math.round(temps.reduce((accumulator, current) => accumulator + current, 0) / temps.length);
                             // Pilih entri mendekati tengah hari (12:00) sebagai ikon; fallback 11/13; lalu pertama.
-                            const midday = fEntries.find(e => /T12:00:00/.test(e.local_datetime)) || fEntries.find(e =>
-                                /T11:00:00|T13:00:00/.test(e.local_datetime)) || fEntries[0];
+                            const midday = fEntries.find(entry => /T12:00:00/.test(entry.local_datetime)) || fEntries.find(entry =>
+                                /T11:00:00|T13:00:00/.test(entry.local_datetime)) || fEntries[0];
                             forecastIcon = midday?.icon || midday?.weather_icon || null;
                             forecastLabel = midday?.label || this.translateWeather(midday?.weather_desc) || '';
                             // Hitung curah hujan total untuk kategorisasi.
-                            const rainVals = fEntries.map(e => e.rain).filter(v => v != null);
-                            const rainSum = rainVals.length ? rainVals.reduce((a, b) => a + b, 0) : 0;
+                            const rainValues = fEntries.map(entry => entry.rain).filter(value => value != null);
+                            const rainSum = rainValues.length ? rainValues.reduce((accumulator, current) => accumulator + current, 0) : 0;
                             const cfg = this.categoryConfig;
                             if (rainSum >= (cfg.shipment?.minRain ?? 5)) category = 'ship';
                             else if (avgTemp !== '-' && rainSum <= (cfg.fertilization?.maxRain ?? 2) && avgTemp >= (cfg
@@ -2811,11 +2051,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     ?.maxTemp ?? 30)) category = 'plowing';
                             style = this.categoryStyles[category] || this.categoryStyles['idle'];
                         }
-                        const obj = {
+                        const dayObject = {
                             date: iso,
-                            day: d.getDate(),
+                            day: date.getDate(),
                             temp: avgTemp === '-' ? '-' : avgTemp + '°',
-                            weekdayShort: d.toLocaleDateString('id-ID', {
+                            weekdayShort: date.toLocaleDateString('id-ID', {
                                 weekday: 'short'
                             }),
                             category,
@@ -2825,32 +2065,32 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                             active: false
                         };
                         const todayIso = new Date().toISOString().substring(0, 10);
-                        if (iso === todayIso) obj.active = true;
-                        days.push(obj);
+                        if (iso === todayIso) dayObject.active = true;
+                        days.push(dayObject);
                     }
                     // Fallback untuk hari minggu ini yang tidak punya data BMKG: gunakan hari terdekat yang punya data
                     // (utamakan mundur ke belakang, jika tidak ada ambil yang di depan). Tandai dengan estimated flag.
                     const todayIso = new Date().toISOString().substring(0, 10);
                     for (let i = 0; i < days.length; i++) {
-                        const d = days[i];
-                        if (d.temp === '-' && d.date <= todayIso) {
-                            let src = null;
-                            for (let b = i - 1; b >= 0; b--) {
-                                if (days[b].temp !== '-') {
-                                    src = days[b];
+                        const currentDay = days[i];
+                        if (currentDay.temp === '-' && currentDay.date <= todayIso) {
+                            let sourceDay = null;
+                            for (let backwardIndex = i - 1; backwardIndex >= 0; backwardIndex--) {
+                                if (days[backwardIndex].temp !== '-') {
+                                    sourceDay = days[backwardIndex];
                                     break;
                                 }
                             }
-                            if (!src) {
-                                for (let f = i + 1; f < days.length; f++) {
-                                    if (days[f].temp !== '-') {
-                                        src = days[f];
+                            if (!sourceDay) {
+                                for (let forwardIndex = i + 1; forwardIndex < days.length; forwardIndex++) {
+                                    if (days[forwardIndex].temp !== '-') {
+                                        sourceDay = days[forwardIndex];
                                         break;
                                     }
                                 }
                             }
-                            if (!src && this.weatherSummary && this.weatherSummary.temp) {
-                                src = {
+                            if (!sourceDay && this.weatherSummary && this.weatherSummary.temp) {
+                                sourceDay = {
                                     temp: Math.round(this.weatherSummary.temp) + '°',
                                     icon: this.weatherSummary.icon,
                                     label: this.weatherSummary.label,
@@ -2858,13 +2098,13 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     categoryBg: this.categoryStyles['idle'].bg
                                 };
                             }
-                            if (src) {
-                                d.temp = src.temp;
-                                d.icon = d.icon || src.icon;
-                                d.label = d.label || src.label;
-                                d.categoryBg = d.categoryBg == this.categoryStyles['idle'].bg ? src.categoryBg || d
-                                    .categoryBg : d.categoryBg;
-                                d.estimated = true;
+                            if (sourceDay) {
+                                currentDay.temp = sourceDay.temp;
+                                currentDay.icon = currentDay.icon || sourceDay.icon;
+                                currentDay.label = currentDay.label || sourceDay.label;
+                                currentDay.categoryBg = currentDay.categoryBg == this.categoryStyles['idle'].bg ? sourceDay.categoryBg || currentDay
+                                    .categoryBg : currentDay.categoryBg;
+                                currentDay.estimated = true;
                             }
                         }
                     }
@@ -2988,12 +2228,12 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     this.computeTopMetrics();
                 },
                 translateWeather(code) {
-                    const c = (code || '').toString().toLowerCase();
-                    if (c.includes('cerah') || c.includes('sun')) return 'Cerah';
-                    if (c.includes('berawan') || c.includes('cloud')) return 'Berawan';
-                    if (c.includes('mendung') || c.includes('overcast')) return 'Mendung';
-                    if (c.includes('hujan') || c.includes('rain')) return 'Hujan';
-                    if (c.includes('malam') || c.includes('night')) return 'Malam';
+                    const weatherCode = (code || '').toString().toLowerCase();
+                    if (weatherCode.includes('cerah') || weatherCode.includes('sun')) return 'Cerah';
+                    if (weatherCode.includes('berawan') || weatherCode.includes('cloud')) return 'Berawan';
+                    if (weatherCode.includes('mendung') || weatherCode.includes('overcast')) return 'Mendung';
+                    if (weatherCode.includes('hujan') || weatherCode.includes('rain')) return 'Hujan';
+                    if (weatherCode.includes('malam') || weatherCode.includes('night')) return 'Malam';
                     return code || '-';
                 },
 
@@ -3167,16 +2407,30 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                 fill: true,
                                 borderColor: '#16a34a',
                                 backgroundColor: 'rgba(22,163,74,0.15)',
-                                pointRadius: 2
+                                pointRadius: 2,
+                                pointBackgroundColor: '#16a34a',
+                                pointBorderColor: '#16a34a'
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            animation: false, // Disable animation to prevent loops
+                            animation: {
+                                duration: 0 // Completely disable animations to prevent circular refs
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
                             plugins: {
                                 legend: {
                                     display: false
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 8,
+                                    displayColors: false
                                 }
                             },
                             scales: {
@@ -3184,12 +2438,21 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                                     beginAtZero: true,
                                     grid: {
                                         display: true,
-                                        color: 'rgba(0,0,0,0.1)'
+                                        color: 'rgba(0,0,0,0.1)',
+                                        drawBorder: false
+                                    },
+                                    ticks: {
+                                        color: '#666'
                                     }
                                 },
                                 x: {
                                     grid: {
                                         display: false
+                                    },
+                                    ticks: {
+                                        color: '#666',
+                                        maxRotation: 45,
+                                        minRotation: 45
                                     }
                                 }
                             }
@@ -3207,11 +2470,11 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 },
                 totalUsage() {
                     if (!this.usage || !this.usage.length) return '0.0';
-                    return this.usage.reduce((a, b) => a + (parseFloat(b.total_l) || 0), 0).toFixed(1);
+                    return this.usage.reduce((accumulator, item) => accumulator + (parseFloat(item.total_l) || 0), 0).toFixed(1);
                 },
                 totalUsage24h() {
                     if (!this.usage24h || !this.usage24h.length) return '0.0';
-                    return this.usage24h.reduce((a, b) => a + (parseFloat(b.total_l) || 0), 0).toFixed(1);
+                    return this.usage24h.reduce((accumulator, item) => accumulator + (parseFloat(item.total_l) || 0), 0).toFixed(1);
                 },
                 avgUsage() {
                     if (!this.usage.length) return '0.0';
@@ -3241,65 +2504,65 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                     const low = this.usage24h.reduce((min, curr) => curr.total_l < min.total_l ? curr : min);
                     return `${low.hour}:00 (${low.total_l}L)`;
                 },
-                fmt(v, suf = '') {
-                    if (v == null) return '-';
-                    const n = parseFloat(v);
-                    return isNaN(n) ? '-' : n.toFixed(1) + suf;
+                fmt(value, suffix = '') {
+                    if (value == null) return '-';
+                    const number = parseFloat(value);
+                    return isNaN(number) ? '-' : number.toFixed(1) + suffix;
                 },
-                batteryDisplay(d) {
-                    if (!d || d.battery_voltage_v == null || d.battery_voltage_v === undefined) return '-';
-                    const v = parseFloat(d.battery_voltage_v);
-                    if (isNaN(v) || v <= 0) return '-';
+                batteryDisplay(device) {
+                    if (!device || device.battery_voltage_v == null || device.battery_voltage_v === undefined) return '-';
+                    const voltage = parseFloat(device.battery_voltage_v);
+                    if (isNaN(voltage) || voltage <= 0) return '-';
                     // Li-Ion 1S: 3.3V (0%) - 4.2V (100%)
-                    const pct = Math.max(0, Math.min(100, ((v - 3.3) / (4.2 - 3.3)) * 100));
-                    return v.toFixed(2) + 'V (' + pct.toFixed(0) + '%)';
+                    const percentage = Math.max(0, Math.min(100, ((voltage - 3.3) / (4.2 - 3.3)) * 100));
+                    return voltage.toFixed(2) + 'V (' + percentage.toFixed(0) + '%)';
                 },
-                batteryDisplayShort(d) {
-                    if (!d || d.battery_voltage_v == null || d.battery_voltage_v === undefined) return '-';
-                    const v = parseFloat(d.battery_voltage_v);
-                    if (isNaN(v) || v <= 0) return '-';
+                batteryDisplayShort(device) {
+                    if (!device || device.battery_voltage_v == null || device.battery_voltage_v === undefined) return '-';
+                    const voltage = parseFloat(device.battery_voltage_v);
+                    if (isNaN(voltage) || voltage <= 0) return '-';
                     // Li-Ion 1S: 3.3V (0%) - 4.2V (100%)
-                    const pct = Math.max(0, Math.min(100, ((v - 3.3) / (4.2 - 3.3)) * 100));
-                    return pct.toFixed(0) + '%';
+                    const percentage = Math.max(0, Math.min(100, ((voltage - 3.3) / (4.2 - 3.3)) * 100));
+                    return percentage.toFixed(0) + '%';
                 },
                 tankFillColor() {
-                    const p = this.tank?.percentage || 0;
-                    if (p < 25) return '#dc2626';
-                    if (p < 50) return '#f59e0b';
-                    if (p < 75) return '#3b82f6';
+                    const percentage = this.tank?.percentage || 0;
+                    if (percentage < 25) return '#dc2626';
+                    if (percentage < 50) return '#f59e0b';
+                    if (percentage < 75) return '#3b82f6';
                     return '#16a34a';
                 },
                 tankFillStyle() {
-                    const col = this.tankFillColor();
+                    const color = this.tankFillColor();
                     return `background: linear-gradient(180deg, ${col}cc 0%, ${col}ee 60%, ${col} 100%); box-shadow: inset 0 2px 4px rgba(0,0,0,0.25);`;
                 },
                 tankStatusClass() {
-                    const s = (this.tank?.status || '').toLowerCase();
-                    if (s.includes('krit') || s === 'low') return 'text-red-600';
-                    if (s.includes('warning') || s.includes('wasp')) return 'text-amber-600';
+                    const status = (this.tank?.status || '').toLowerCase();
+                    if (status.includes('krit') || status === 'low') return 'text-red-600';
+                    if (status.includes('warning') || status.includes('wasp')) return 'text-amber-600';
                     return 'text-green-600';
                 },
                 tankLabelClass() {
-                    const p = this.tank?.percentage || 0;
-                    if (p < 25) return 'bg-red-600/70 text-white';
-                    if (p < 50) return 'bg-amber-500/70 text-white';
-                    if (p < 75) return 'bg-blue-600/70 text-white';
+                    const percentage = this.tank?.percentage || 0;
+                    if (percentage < 25) return 'bg-red-600/70 text-white';
+                    if (percentage < 50) return 'bg-amber-500/70 text-white';
+                    if (percentage < 75) return 'bg-blue-600/70 text-white';
                     return 'bg-green-600/70 text-white';
                 },
                 deviceUsageToday(deviceId) {
-                    const d = this.devices.find(d => d.device_id === deviceId || d.id === deviceId);
-                    if (!d || d.water_usage_today_l == null) return '-';
-                    return d.water_usage_today_l.toFixed(0) + 'L';
+                    const device = this.devices.find(dev => dev.device_id === deviceId || dev.id === deviceId);
+                    if (!device || device.water_usage_today_l == null) return '-';
+                    return device.water_usage_today_l.toFixed(0) + 'L';
                 },
-                timeAgo(ts) {
-                    if (!ts) return '-';
-                    const d = new Date(ts);
-                    const diff = (Date.now() - d) / 60000;
+                timeAgo(timestamp) {
+                    if (!timestamp) return '-';
+                    const date = new Date(timestamp);
+                    const diff = (Date.now() - date) / 60000;
                     if (diff < 1) return 'baru';
                     if (diff < 60) return Math.round(diff) + 'm';
-                    const h = diff / 60;
-                    if (h < 24) return h.toFixed(1) + 'j';
-                    return d.toLocaleDateString('id-ID', {
+                    const hours = diff / 60;
+                    if (hours < 24) return hours.toFixed(1) + 'j';
+                    return date.toLocaleDateString('id-ID', {
                         day: '2-digit',
                         month: 'short'
                     });
@@ -3307,25 +2570,40 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
                 deviceBadgeClass() {
                     return 'bg-gray-100 text-gray-600';
                 },
-                statusShort(s) {
-                    return s?.substring(0, 6) || 'ok';
+                statusShort(statusText) {
+                    return statusText?.substring(0, 6) || 'ok';
                 },
-                sessionColor(st) {
-                    return st === 'completed' ? 'text-green-600' : st === 'pending' ? 'text-gray-500' : 'text-yellow-600';
+                sessionColor(sessionStatus) {
+                    return sessionStatus === 'completed' ? 'text-green-600' : sessionStatus === 'pending' ? 'text-gray-500' : 'text-yellow-600';
                 },
                 init() {
-                    this.loadAll();
-                    setInterval(() => this.loadAll(), 60000);
+                    // Initialize charts first
+                    setTimeout(() => {
+                        this.initEnvironmentalCharts();
+                    }, 500);
+                    
+                    // Initialize leaflet
+                    setTimeout(() => this.initLeaflet(), 800);
+                    
+                    // Load data after charts ready
+                    setTimeout(() => {
+                        this.loadAll();
+                    }, 1200);
+                    
+                    // Auto refresh setiap 60 detik - hanya jika tidak sedang loading
+                    setInterval(() => {
+                        if (!this.loadingAll) {
+                            this.loadAll();
+                        }
+                    }, 60000);
+                    
+                    // Clock tick
                     this.tickClock();
                     setInterval(() => this.tickClock(), 1000);
-                    // initialize leaflet after slight delay for layout stability
-                    setTimeout(() => this.initLeaflet(), 800);
-                    // Initialize environmental charts
-                    setTimeout(() => this.initEnvironmentalCharts(), 1000);
                 },
                 tickClock() {
                     const now = new Date();
-                    const pad = n => n.toString().padStart(2, '0');
+                    const pad = number => number.toString().padStart(2, '0');
                     this.clock.time = pad(now.getHours()) + ':' + pad(now.getMinutes());
                     this.clock.seconds = ':' + pad(now.getSeconds());
                     this.clock.dateLong = now.toLocaleDateString('id-ID', {
@@ -3348,6 +2626,3 @@ init();" class="h-full bg-gray-50 text-gray-800 min-h-full">
             }
         }
     </script>
-</body>
-
-</html>
