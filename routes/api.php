@@ -27,9 +27,22 @@ Route::prefix('v1')->group(function () {
 });
 
 Route::prefix('v1')->group(function () {
+    // Get all combined data
     Route::get('/sensor-datas', [GetDataLogController::class, 'getCombinedData']);
+    
+    // Get combined data by ID
     Route::get('/sensor-datas/{id}', [GetDataLogController::class, 'getCombinedDatabyIdGetDataLog']);
+    
+    // Store bulk sensor data (1 weather + multiple nodes)
+    Route::post('/sensor-datas/bulk', [GetDataLogController::class, 'storeBulkSensorData']);
 });
+
+// CRUD GetDataLog
+Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
+Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
+Route::post('/v1/getDataLogs', [GetDataLogController::class, 'store']);
+Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
+Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
 
 // ===== SENSOR NODE DATA ROUTES =====
 Route::prefix('v1')->group(function () {
@@ -40,11 +53,11 @@ Route::prefix('v1')->group(function () {
     Route::delete('/sensorNodeData/{id}', [SensorNodeDataController::class, 'destroy']);
 });
 
-Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
-Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
-Route::post('/v1/getDataLogs', [GetDataLogController::class, 'store']);
-Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
-Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
+// Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
+// Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
+// Route::post('/v1/getDataLogs', [GetDataLogController::class, 'store']);
+// Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
+// Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
 
 Route::get('/v1/sensorWeatherData', [SensorWeatherDataController::class, 'index']);
 Route::get('/v1/sensorWeatherData/{id}', [SensorWeatherDataController::class, 'show']);
