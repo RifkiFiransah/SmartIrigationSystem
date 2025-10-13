@@ -7,12 +7,26 @@ use App\Http\Controllers\Api\WaterStorageController;
 use App\Http\Controllers\Api\DataTransferController;
 use App\Http\Controllers\Api\IrrigationController;
 use App\Http\Controllers\Api\DeviceUsageController;
+use App\Http\Controllers\Api\GetDataLogController;
+use App\Http\Controllers\Api\SensorWeatherDataController;
 use App\Http\Controllers\Api\WeatherController;
 use App\Http\Controllers\BMKGForecastController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Device;
 use Carbon\Carbon;
+
+Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
+Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
+Route::post('/v1/getDataLogs', [GetDataLogController::class, 'store']);
+Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
+Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
+
+Route::get('/v1/sensorWeatherData', [SensorWeatherDataController::class, 'index']);
+Route::get('/v1/sensorWeatherData/{id}', [SensorWeatherDataController::class, 'show']);
+Route::post('/v1/sensorWeatherData', [SensorWeatherDataController::class, 'store']);
+Route::put('/v1/sensorWeatherData/{id}', [SensorWeatherDataController::class, 'update']);
+Route::delete('/v1/sensorWeatherData/{id}', [SensorWeatherDataController::class, 'destroy']);
 
 // ===== AUTH ROUTES =====
 Route::post('/auth/login', [AuthController::class, 'login']);
