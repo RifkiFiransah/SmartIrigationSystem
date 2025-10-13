@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v1')->group(function () {
     Route::get('/sensor-datas', [GetDataLogController::class, 'getCombinedData']);
+    Route::get('/sensor-datas/{id}', [GetDataLogController::class, 'getCombinedDatabyIdGetDataLog']);
 });
 
 // ===== SENSOR NODE DATA ROUTES =====
@@ -80,7 +81,7 @@ Route::prefix('water-storage')->group(function () {
     Route::get('/tank/{tankName}', [WaterStorageController::class, 'getByTankName']);
     Route::get('/daily-usage', [WaterStorageController::class, 'dailyUsage']);
     Route::get('/hourly-usage', [WaterStorageController::class, 'hourlyUsage']);
-    
+
     // Protected route for updating volume (for IoT devices)
     Route::post('/update-volume', [WaterStorageController::class, 'updateVolume'])->middleware('auth:sanctum');
 });
@@ -123,7 +124,7 @@ Route::prefix('transfer')->group(function () {
     Route::post('/water-level', [DataTransferController::class, 'storeWaterLevel']);
     Route::post('/simple-water-level', [DataTransferController::class, 'simpleWaterLevel']);
     Route::post('/heartbeat', [DataTransferController::class, 'heartbeat']);
-    
+
     // GET endpoints untuk hardware mendapatkan konfigurasi
     Route::get('/device-config/{device_id}', [DataTransferController::class, 'getDeviceConfig']);
     Route::get('/system-status', [DataTransferController::class, 'getSystemStatus']);
@@ -136,26 +137,26 @@ Route::prefix('irrigation')->group(function () {
 });
 
 // ===== DEVICE USAGE (Per-device sessions & history) =====
-Route::prefix('devices/{device}')->group(function(){
+Route::prefix('devices/{device}')->group(function () {
     Route::get('/irrigation/sessions', [DeviceUsageController::class, 'sessions']);
     Route::get('/usage-history', [DeviceUsageController::class, 'usageHistory']);
 });
 
 // ===== DEVICE VALVE & CONNECTION SIMPLE ENDPOINTS =====
-Route::prefix('devices/{device}')->group(function(){
-    Route::get('/valve', function(Device $device){
+Route::prefix('devices/{device}')->group(function () {
+    Route::get('/valve', function (Device $device) {
         return response()->json([
             'device_id' => $device->id,
             'valve_state' => $device->valve_state,
             'valve_state_changed_at' => $device->valve_state_changed_at,
         ]);
     });
-    Route::post('/valve', function(\Illuminate\Http\Request $request, Device $device){
+    Route::post('/valve', function (\Illuminate\Http\Request $request, Device $device) {
         $request->validate(['valve_state' => 'required|in:open,closed']);
         $device->toggleValve($request->valve_state);
-        return response()->json(['ok'=>true]);
+        return response()->json(['ok' => true]);
     });
-    Route::get('/connection', function(Device $device){
+    Route::get('/connection', function (Device $device) {
         return response()->json([
             'device_id' => $device->id,
             'connection_state' => $device->connection_state,
@@ -163,10 +164,10 @@ Route::prefix('devices/{device}')->group(function(){
             'last_seen_at' => $device->last_seen_at,
         ]);
     });
-    Route::post('/connection', function(\Illuminate\Http\Request $request, Device $device){
+    Route::post('/connection', function (\Illuminate\Http\Request $request, Device $device) {
         $request->validate(['state' => 'required|in:online,offline']);
         $device->setConnectionState($request->state, 'manual');
-        return response()->json(['ok'=>true]);
+        return response()->json(['ok' => true]);
     });
 });
 
@@ -183,8 +184,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 // ===== SIMPLE HEALTH CHECK (PUBLIC) =====
-Route::get('/health', function(){
-    return response()->json(['ok'=>true,'time'=>Carbon::now()->format('Y-m-d H:i:s')]);
+Route::get('/health', function () {
+    return response()->json(['ok' => true, 'time' => Carbon::now()->format('Y-m-d H:i:s')]);
 });
 
 // ===== BMKG FORECAST PROXY =====
