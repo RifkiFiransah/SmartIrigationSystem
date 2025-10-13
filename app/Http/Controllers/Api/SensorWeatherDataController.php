@@ -10,69 +10,119 @@ class SensorWeatherDataController extends Controller
 {
     public function index()
     {
-        return response()->json(SensorWeatherData::latest()->get());
+        try {
+            $data = SensorWeatherData::orderBy('id', 'desc')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show($id)
     {
-        $rec = SensorWeatherData::findOrFail($id);
-        return response()->json($rec);
+        try {
+            $rec = SensorWeatherData::findOrFail($id);
+            return response()->json([
+                'success' => true,
+                'data' => $rec
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'id' => 'sometimes|integer',
-            'sesi_id_getdata' => 'required|integer',
-            'node_id' => 'required|integer',
-            'voltage' => 'nullable|numeric',
-            'current' => 'nullable|numeric',
-            'power' => 'nullable|numeric',
-            'light' => 'nullable|numeric',
-            'rain' => 'nullable|numeric',
-            'rain_adc' => 'nullable|integer',
-            'wind' => 'nullable|numeric',
-            'wind_pulse' => 'nullable|integer',
-            'humidity' => 'nullable|numeric',
-            'temp_dht' => 'nullable|numeric',
-            'rssi' => 'nullable|numeric',
-            'snr' => 'nullable|numeric',
-            'signal_quality' => 'nullable|string',
-        ]);
+        try {
+            $data = $request->validate([
+                'sesi_id_getdata' => 'required|integer',
+                'node_id' => 'required|integer',
+                'voltage' => 'nullable|numeric',
+                'current' => 'nullable|numeric',
+                'power' => 'nullable|numeric',
+                'light' => 'nullable|numeric',
+                'rain' => 'nullable|numeric',
+                'rain_adc' => 'nullable|integer',
+                'wind' => 'nullable|numeric',
+                'wind_pulse' => 'nullable|integer',
+                'humidity' => 'nullable|numeric',
+                'temp_dht' => 'nullable|numeric',
+                'rssi' => 'nullable|numeric',
+                'snr' => 'nullable|numeric',
+                'signal_quality' => 'nullable|string',
+            ]);
 
-        $rec = SensorWeatherData::create($data);
-        return response()->json($rec, 201);
+            $rec = SensorWeatherData::create($data);
+            return response()->json([
+                'success' => true,
+                'data' => $rec
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $rec = SensorWeatherData::findOrFail($id);
-        $data = $request->validate([
-            'sesi_id_getdata' => 'sometimes|integer',
-            'node_id' => 'sometimes|integer',
-            'voltage' => 'nullable|numeric',
-            'current' => 'nullable|numeric',
-            'power' => 'nullable|numeric',
-            'light' => 'nullable|numeric',
-            'rain' => 'nullable|numeric',
-            'rain_adc' => 'nullable|integer',
-            'wind' => 'nullable|numeric',
-            'wind_pulse' => 'nullable|integer',
-            'humidity' => 'nullable|numeric',
-            'temp_dht' => 'nullable|numeric',
-            'rssi' => 'nullable|numeric',
-            'snr' => 'nullable|numeric',
-            'signal_quality' => 'nullable|string',
-        ]);
+        try {
+            $rec = SensorWeatherData::findOrFail($id);
+            $data = $request->validate([
+                'sesi_id_getdata' => 'sometimes|integer',
+                'node_id' => 'sometimes|integer',
+                'voltage' => 'nullable|numeric',
+                'current' => 'nullable|numeric',
+                'power' => 'nullable|numeric',
+                'light' => 'nullable|numeric',
+                'rain' => 'nullable|numeric',
+                'rain_adc' => 'nullable|integer',
+                'wind' => 'nullable|numeric',
+                'wind_pulse' => 'nullable|integer',
+                'humidity' => 'nullable|numeric',
+                'temp_dht' => 'nullable|numeric',
+                'rssi' => 'nullable|numeric',
+                'snr' => 'nullable|numeric',
+                'signal_quality' => 'nullable|string',
+            ]);
 
-        $rec->update($data);
-        return response()->json($rec);
+            $rec->update($data);
+            return response()->json([
+                'success' => true,
+                'data' => $rec
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy($id)
     {
-        $rec = SensorWeatherData::findOrFail($id);
-        $rec->delete();
-        return response()->json(null, 204);
+        try {
+            $rec = SensorWeatherData::findOrFail($id);
+            $rec->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Data deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

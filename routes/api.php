@@ -19,8 +19,8 @@ use Carbon\Carbon;
 Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
 Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
 Route::post('/v1/getDataLogs', [GetDataLogController::class, 'store']);
-Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
-Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
+// Route::put('/v1/getDataLogs/{id}', [GetDataLogController::class, 'update']);
+// Route::delete('/v1/getDataLogs/{id}', [GetDataLogController::class, 'destroy']);
 
 Route::get('/v1/sensorWeatherData', [SensorWeatherDataController::class, 'index']);
 Route::get('/v1/sensorWeatherData/{id}', [SensorWeatherDataController::class, 'show']);

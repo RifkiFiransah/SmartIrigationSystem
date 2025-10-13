@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -10,49 +9,57 @@ class GetDataLogController extends Controller
 {
     public function index()
     {
-        return response()->json(GetDataLog::latest('waktu_mulai')->get());
+        try {
+            $logs = GetDataLog::orderBy('waktu_mulai', 'desc')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $logs
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show($id)
     {
-        $log = GetDataLog::findOrFail($id);
-        return response()->json($log);
+        try {
+            $log = GetDataLog::findOrFail($id);
+            return response()->json([
+                'success' => true,
+                'data' => $log
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'id' => 'sometimes|integer',
-            'sesi_id_getdata' => 'required|integer',
-            'waktu_mulai' => 'required|date',
-            'waktu_selesai' => 'nullable|date',
-            'node_sukses' => 'nullable|integer',
-            'node_gagal' => 'nullable|integer',
-        ]);
+        try {
+            $data = $request->validate([
+                'sesi_id_getdata' => 'required|integer',
+                'waktu_mulai' => 'required|date',
+                'waktu_selesai' => 'nullable|date',
+                'node_sukses' => 'nullable|integer',
+                'node_gagal' => 'nullable|integer',
+            ]);
 
-        $log = GetDataLog::create($data);
-        return response()->json($log, 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $log = GetDataLog::findOrFail($id);
-        $data = $request->validate([
-            'sesi_id_getdata' => 'sometimes|integer',
-            'waktu_mulai' => 'sometimes|date',
-            'waktu_selesai' => 'nullable|date',
-            'node_sukses' => 'nullable|integer',
-            'node_gagal' => 'nullable|integer',
-        ]);
-
-        $log->update($data);
-        return response()->json($log);
-    }
-
-    public function destroy($id)
-    {
-        $log = GetDataLog::findOrFail($id);
-        $log->delete();
-        return response()->json(null, 204);
+            $log = GetDataLog::create($data);
+            return response()->json([
+                'success' => true,
+                'data' => $log
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
