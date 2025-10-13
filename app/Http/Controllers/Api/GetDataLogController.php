@@ -11,10 +11,10 @@ class GetDataLogController extends Controller
     {
         try {
             $logs = GetDataLog::with(['sensorNodeData', 'sensorWeatherData'])->orderBy('waktu_mulai', 'desc')->get();
-            $logs_node = $logs->sensorNodeData()->with('node')->get();
+            // $logs_node = $logs->sensorNodeData()->with('node')->get();
             return response()->json([
                 'success' => true,
-                'data_node' => $logs_node,
+                // 'data_node' => $logs_node,
                 'data' => $logs,
             ]);
         } catch (\Exception $e) {
