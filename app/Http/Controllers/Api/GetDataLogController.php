@@ -13,7 +13,8 @@ class GetDataLogController extends Controller
         try {
             // Ambil parameter filter jika ada
             $sesiId = $request->input('sesi_id');
-            $limit = $request->input('limit', 1); // Default ambil sesi terakhir
+            $limit = $request->input('limit'); // Jika tidak ada limit, ambil semua
+            $date = $request->input('date'); // Filter by date
 
             // Query dengan filter
             $query = GetDataLog::with(['sensorNodeData.node', 'sensorWeatherData.node'])
@@ -23,84 +24,104 @@ class GetDataLogController extends Controller
                 $query->where('sesi_id_getdata', $sesiId);
             }
 
-            // Ambil data log terbaru
-            $latestLog = $query->first();
+            if ($date) {
+                $query->whereDate('waktu_mulai', $date);
+            }
 
-            if (!$latestLog) {
+            // Ambil data sesuai limit atau semua
+            $logs = $limit ? $query->limit($limit)->get() : $query->get();
+
+            if ($logs->isEmpty()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No data found'
                 ], 404);
             }
 
-            // Hitung total expected nodes (bisa diambil dari config atau database)
+            // Hitung total expected nodes
             $expectedNodes = 12; // Sesuaikan dengan jumlah node di sistem Anda
-            $receivedNodes = $latestLog->sensorNodeData->count();
-            $completenessPercentage = $expectedNodes > 0
-                ? round(($receivedNodes / $expectedNodes) * 100, 2)
-                : 0;
 
-            // Format response sesuai struktur yang diinginkan
-            return response()->json([
-                'timestamp' => now()->toIso8601String(),
-                'sesi_id_getdata' => $latestLog->sesi_id_getdata,
-                'getdata_logs' => [
-                    [
-                        'id' => $latestLog->id,
-                        'sesi_id_getdata' => $latestLog->sesi_id_getdata,
-                        'waktu_mulai' => $latestLog->waktu_mulai,
-                        'waktu_selesai' => $latestLog->waktu_selesai,
-                        'node_sukses' => $latestLog->node_sukses ?? 0,
-                        'node_gagal' => $latestLog->node_gagal ?? 0,
+            // Format response untuk semua data logs
+            $allData = $logs->map(function ($log) use ($expectedNodes) {
+                $receivedNodes = $log->sensorNodeData->count();
+                $completenessPercentage = $expectedNodes > 0
+                    ? round(($receivedNodes / $expectedNodes) * 100, 2)
+                    : 0;
+
+                return [
+                    'getdata_log' => [
+                        'id' => $log->id,
+                        'sesi_id_getdata' => $log->sesi_id_getdata,
+                        'waktu_mulai' => $log->waktu_mulai,
+                        'waktu_selesai' => $log->waktu_selesai,
+                        'node_sukses' => $log->node_sukses ?? 0,
+                        'node_gagal' => $log->node_gagal ?? 0,
+                    ],
+                    'sensor_weather_data' => $log->sensorWeatherData->map(function ($weather) {
+                        return [
+                            'id' => $weather->id,
+                            'sesi_id_getdata' => $weather->sesi_id_getdata,
+                            'node_id' => $weather->node_id,
+                            'voltage' => $weather->voltage ?? 0,
+                            'current' => $weather->current ?? 0,
+                            'power' => $weather->power ?? 0,
+                            'light' => $weather->light ?? 0,
+                            'rain' => $weather->rain ?? 0,
+                            'rain_adc' => $weather->rain_adc ?? 0,
+                            'wind' => $weather->wind ?? 0,
+                            'wind_pulse' => $weather->wind_pulse ?? 0,
+                            'humidity' => $weather->humidity ?? 0,
+                            'temp_dht' => $weather->temp_dht ?? 0,
+                            'rssi' => $weather->rssi ?? 0,
+                            'snr' => $weather->snr ?? 0,
+                            'signal_quality' => $this->getSignalQuality($weather->rssi ?? 0, $weather->snr ?? 0),
+                        ];
+                    }),
+                    'sensor_node_data' => $log->sensorNodeData->map(function ($node) {
+                        return [
+                            'id' => $node->id,
+                            'sesi_id_getdata' => $node->sesi_id_getdata,
+                            'node_id' => $node->node_id,
+                            'rssi_dbm' => $node->rssi_dbm ?? 0,
+                            'snr_db' => $node->snr_db ?? 0,
+                            'voltage_v' => $node->voltage_v ?? 0,
+                            'current_ma' => $node->current_ma ?? 0,
+                            'power_mw' => $node->power_mw ?? 0,
+                            'temp_c' => $node->temp_c ?? 0,
+                            'soil_pct' => $node->soil_pct ?? 0,
+                            'soil_adc' => $node->soil_adc ?? 0,
+                            'ts_counter' => $node->ts_counter ?? 0,
+                            'received_at' => $node->received_at ?? $node->created_at,
+                        ];
+                    }),
+                    'data_completeness' => [
+                        'expected_nodes' => $expectedNodes,
+                        'received_nodes' => $receivedNodes,
+                        'completeness_percentage' => $completenessPercentage . '%',
                     ]
+                ];
+            });
+
+            // Hitung summary statistics
+            $totalLogs = $logs->count();
+            $totalWeatherData = $logs->sum(function ($log) {
+                return $log->sensorWeatherData->count();
+            });
+            $totalNodeData = $logs->sum(function ($log) {
+                return $log->sensorNodeData->count();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sensor data retrieved successfully',
+                'timestamp' => now()->toIso8601String(),
+                'data' => $allData,
+                'summary' => [
+                    'total_sessions' => $totalLogs,
+                    'total_weather_records' => $totalWeatherData,
+                    'total_node_records' => $totalNodeData,
+                    'expected_nodes_per_session' => $expectedNodes,
                 ],
-                'sensor_weather_data' => $latestLog->sensorWeatherData->map(function ($weather) {
-                    return [
-                        'id' => $weather->id,
-                        'sesi_id_getdata' => $weather->sesi_id_getdata,
-                        'node_id' => $weather->node_id,
-                        'voltage' => $weather->voltage ?? 0,
-                        'current' => $weather->current ?? 0,
-                        'power' => $weather->power ?? 0,
-                        'light' => $weather->light ?? 0,
-                        'rain' => $weather->rain ?? 0,
-                        'rain_adc' => $weather->rain_adc ?? 0,
-                        'wind' => $weather->wind ?? 0,
-                        'wind_pulse' => $weather->wind_pulse ?? 0,
-                        'humidity' => $weather->humidity ?? 0,
-                        'temp_dht' => $weather->temp_dht ?? 0,
-                        'rssi' => $weather->rssi ?? 0,
-                        'snr' => $weather->snr ?? 0,
-                        'signal_quality' => $this->getSignalQuality($weather->rssi ?? 0, $weather->snr ?? 0),
-                    ];
-                }),
-                'sensor_node_data' => $latestLog->sensorNodeData->map(function ($node) {
-                    return [
-                        'id' => $node->id,
-                        'sesi_id_getdata' => $node->sesi_id_getdata,
-                        'node_id' => $node->node_id,
-                        'rssi_dbm' => $node->rssi_dbm ?? 0,
-                        'snr_db' => $node->snr_db ?? 0,
-                        'voltage_v' => $node->voltage_v ?? 0,
-                        'current_ma' => $node->current_ma ?? 0,
-                        'power_mw' => $node->power_mw ?? 0,
-                        'temp_c' => $node->temp_c ?? 0,
-                        'soil_pct' => $node->soil_pct ?? 0,
-                        'soil_adc' => $node->soil_adc ?? 0,
-                        'ts_counter' => $node->ts_counter ?? 0,
-                        'received_at' => $node->received_at ?? $node->created_at,
-                    ];
-                }),
-                'total_records' => [
-                    'getdata_logs' => 1,
-                    'sensor_weather_data' => $latestLog->sensorWeatherData->count(),
-                    'sensor_node_data' => $receivedNodes,
-                ],
-                'data_completeness' => [
-                    'expected_nodes' => $expectedNodes,
-                    'received_nodes' => $receivedNodes,
-                    'completeness_percentage' => $completenessPercentage . '%',
-                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
