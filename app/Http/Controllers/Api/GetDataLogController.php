@@ -518,117 +518,188 @@ class GetDataLogController extends Controller
     {
         try {
             // Log request untuk debugging
+            Log::info('=== NEW REQUEST ===');
             Log::info('Request Data:', $request->all());
 
-            // Validasi request
-            $validated = $request->validate([
-                'sesi_id_getdata' => 'required|integer',
-                'waktu_mulai' => 'required|date',
-                'waktu_selesai' => 'nullable|date',
-                // Weather data (array dengan 1 objek)
-                'sensor_weather_data' => 'required|array|min:1',
-                'sensor_weather_data.0.node_id' => 'required|integer',
-                'sensor_weather_data.0.voltage' => 'nullable|numeric',
-                'sensor_weather_data.0.current' => 'nullable|numeric',
-                'sensor_weather_data.0.power' => 'nullable|numeric',
-                'sensor_weather_data.0.light' => 'nullable|numeric',
-                'sensor_weather_data.0.rain' => 'nullable|numeric',
-                'sensor_weather_data.0.rain_adc' => 'nullable|integer',
-                'sensor_weather_data.0.wind' => 'nullable|numeric',
-                'sensor_weather_data.0.wind_pulse' => 'nullable|integer',
-                'sensor_weather_data.0.humidity' => 'nullable|numeric',
-                'sensor_weather_data.0.temp_dht' => 'nullable|numeric',
-                'sensor_weather_data.0.rssi' => 'nullable|numeric',
-                'sensor_weather_data.0.snr' => 'nullable|numeric',
-                // Node data (array of objects)
-                'sensor_node_data' => 'required|array|min:1',
-                'sensor_node_data.*.node_id' => 'required|integer',
-                'sensor_node_data.*.rssi_dbm' => 'nullable|numeric',
-                'sensor_node_data.*.snr_db' => 'nullable|numeric',
-                'sensor_node_data.*.voltage_v' => 'nullable|numeric',
-                'sensor_node_data.*.current_ma' => 'nullable|numeric',
-                'sensor_node_data.*.power_mw' => 'nullable|numeric',
-                'sensor_node_data.*.temp_c' => 'nullable|numeric',
-                'sensor_node_data.*.soil_pct' => 'nullable|numeric',
-                'sensor_node_data.*.soil_adc' => 'nullable|integer',
-                'sensor_node_data.*.ts_counter' => 'nullable|integer',
-                'sensor_node_data.*.received_at' => 'nullable|date',
-            ]);
+            // Baca raw input
+            $rawInput = $request->getContent();
+
+            if (empty($rawInput)) {
+                Log::warning('Empty request body');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request body is empty'
+                ], 400);
+            }
+
+            Log::info('Request received - Size: ' . strlen($rawInput) . ' bytes');
+
+            // Decode JSON manually untuk lebih fleksibel
+            $jsonData = json_decode($rawInput, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('JSON parse error: ' . json_last_error_msg());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid JSON format: ' . json_last_error_msg()
+                ], 400);
+            }
+
+            // Validasi field wajib
+            $requiredFields = ['sesi_id_getdata', 'waktu_mulai'];
+
+            foreach ($requiredFields as $field) {
+                if (!isset($jsonData[$field])) {
+                    Log::warning("Missing required field: $field");
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Missing required field: $field"
+                    ], 400);
+                }
+            }
+
+            // Extract data
+            $sesiId = (int)$jsonData['sesi_id_getdata'];
+            $waktuMulai = $jsonData['waktu_mulai'];
+            $waktuSelesai = $jsonData['waktu_selesai'] ?? now();
+            $weatherData = $jsonData['sensor_weather_data'] ?? [];
+            $nodeData = $jsonData['sensor_node_data'] ?? [];
+
+            Log::info("Processing sesi_id: $sesiId");
+            Log::info("Data counts - Weather: " . count($weatherData) . ", Nodes: " . count($nodeData));
+
+            // Validasi minimal data
+            if (empty($weatherData) && empty($nodeData)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No sensor data provided'
+                ], 400);
+            }
 
             // Mulai database transaction
             DB::beginTransaction();
+            Log::info("Transaction started");
 
-            // Cek apakah GetDataLog dengan sesi_id sudah ada
-            $getDataLog = GetDataLog::where('sesi_id_getdata', $validated['sesi_id_getdata'])->first();
+            $insertedRecords = [
+                'getdata_logs' => 0,
+                'sensor_weather_data' => 0,
+                'sensor_node_data' => 0
+            ];
+
+            // =====================================================
+            // INSERT/UPDATE: getdata_logs
+            // =====================================================
+
+            $getDataLog = GetDataLog::where('sesi_id_getdata', $sesiId)->first();
 
             if (!$getDataLog) {
-                // Buat GetDataLog baru jika belum ada
                 $getDataLog = GetDataLog::create([
-                    'sesi_id_getdata' => $validated['sesi_id_getdata'],
-                    'waktu_mulai' => $validated['waktu_mulai'],
-                    'waktu_selesai' => $validated['waktu_selesai'] ?? now(),
-                    'node_sukses' => count($validated['sensor_node_data']),
+                    'sesi_id_getdata' => $sesiId,
+                    'waktu_mulai' => $waktuMulai,
+                    'waktu_selesai' => $waktuSelesai,
+                    'node_sukses' => count($nodeData),
                     'node_gagal' => 0,
                 ]);
+                $insertedRecords['getdata_logs'] = 1;
+                Log::info("Created new getdata_log with ID: " . $getDataLog->id);
             } else {
-                // Update jika sudah ada
                 $getDataLog->update([
-                    'waktu_selesai' => $validated['waktu_selesai'] ?? now(),
-                    'node_sukses' => count($validated['sensor_node_data']),
+                    'waktu_selesai' => $waktuSelesai,
+                    'node_sukses' => count($nodeData),
                 ]);
+                Log::info("Updated existing getdata_log ID: " . $getDataLog->id);
             }
 
-            // Simpan Sensor Weather Data (ambil data pertama dari array)
-            $weatherDataInput = $validated['sensor_weather_data'][0];
+            // =====================================================
+            // INSERT: sensor_weather_data
+            // =====================================================
 
-            // Hitung signal quality
-            $rssi = $weatherDataInput['rssi'] ?? 0;
-            $snr = $weatherDataInput['snr'] ?? 0;
-            $signalQuality = $this->getSignalQuality($rssi, $snr);
+            $savedWeatherData = [];
 
-            $weatherData = \App\Models\SensorWeatherData::create([
-                'sesi_id_getdata' => $validated['sesi_id_getdata'],
-                'node_id' => $weatherDataInput['node_id'],
-                'voltage' => $weatherDataInput['voltage'] ?? null,
-                'current' => $weatherDataInput['current'] ?? null,
-                'power' => $weatherDataInput['power'] ?? null,
-                'light' => $weatherDataInput['light'] ?? null,
-                'rain' => $weatherDataInput['rain'] ?? null,
-                'rain_adc' => $weatherDataInput['rain_adc'] ?? null,
-                'wind' => $weatherDataInput['wind'] ?? null,
-                'wind_pulse' => $weatherDataInput['wind_pulse'] ?? null,
-                'humidity' => $weatherDataInput['humidity'] ?? null,
-                'temp_dht' => $weatherDataInput['temp_dht'] ?? null,
-                'rssi' => $rssi,
-                'snr' => $snr,
-                'signal_quality' => $signalQuality,
-            ]);
+            if (!empty($weatherData)) {
+                foreach ($weatherData as $index => $weather) {
+                    try {
+                        // Hitung signal quality
+                        $rssi = (float)($weather['rssi'] ?? 0);
+                        $snr = (float)($weather['snr'] ?? 0);
+                        $signalQuality = $this->getSignalQuality($rssi, $snr);
 
-            // Simpan Sensor Node Data (multiple data)
+                        $weatherRecord = \App\Models\SensorWeatherData::create([
+                            'sesi_id_getdata' => $sesiId,
+                            'node_id' => $weather['node_id'],
+                            'voltage' => $weather['voltage'] ?? null,
+                            'current' => $weather['current'] ?? null,
+                            'power' => $weather['power'] ?? null,
+                            'light' => $weather['light'] ?? null,
+                            'rain' => $weather['rain'] ?? null,
+                            'rain_adc' => $weather['rain_adc'] ?? null,
+                            'wind' => $weather['wind'] ?? null,
+                            'wind_pulse' => $weather['wind_pulse'] ?? null,
+                            'humidity' => $weather['humidity'] ?? null,
+                            'temp_dht' => $weather['temp_dht'] ?? null,
+                            'rssi' => $rssi,
+                            'snr' => $snr,
+                            'signal_quality' => $signalQuality,
+                        ]);
+
+                        $savedWeatherData[] = $weatherRecord;
+                        $insertedRecords['sensor_weather_data']++;
+                    } catch (\Exception $e) {
+                        Log::error("Error inserting sensor_weather_data #$index: " . $e->getMessage());
+                        throw $e;
+                    }
+                }
+
+                Log::info("Inserted {$insertedRecords['sensor_weather_data']} weather records");
+            }
+
+            // =====================================================
+            // INSERT: sensor_node_data
+            // =====================================================
+
             $savedNodes = [];
-            foreach ($validated['sensor_node_data'] as $nodeData) {
-                $savedNode = \App\Models\SensorNodeData::create([
-                    'sesi_id_getdata' => $validated['sesi_id_getdata'],
-                    'node_id' => $nodeData['node_id'],
-                    'rssi_dbm' => $nodeData['rssi_dbm'] ?? null,
-                    'snr_db' => $nodeData['snr_db'] ?? null,
-                    'voltage_v' => $nodeData['voltage_v'] ?? null,
-                    'current_ma' => $nodeData['current_ma'] ?? null,
-                    'power_mw' => $nodeData['power_mw'] ?? null,
-                    'temp_c' => $nodeData['temp_c'] ?? null,
-                    'soil_pct' => $nodeData['soil_pct'] ?? null,
-                    'soil_adc' => $nodeData['soil_adc'] ?? null,
-                    'ts_counter' => $nodeData['ts_counter'] ?? null,
-                    'received_at' => $nodeData['received_at'] ?? now(),
-                ]);
-                $savedNodes[] = $savedNode;
+
+            if (!empty($nodeData)) {
+                foreach ($nodeData as $index => $node) {
+                    try {
+                        $nodeRecord = \App\Models\SensorNodeData::create([
+                            'sesi_id_getdata' => $sesiId,
+                            'node_id' => $node['node_id'],
+                            'rssi_dbm' => $node['rssi_dbm'] ?? null,
+                            'snr_db' => $node['snr_db'] ?? null,
+                            'voltage_v' => $node['voltage_v'] ?? null,
+                            'current_ma' => $node['current_ma'] ?? null,
+                            'power_mw' => $node['power_mw'] ?? null,
+                            'temp_c' => $node['temp_c'] ?? null,
+                            'soil_pct' => $node['soil_pct'] ?? null,
+                            'soil_adc' => $node['soil_adc'] ?? null,
+                            'ts_counter' => $node['ts_counter'] ?? null,
+                            'received_at' => $node['received_at'] ?? now(),
+                        ]);
+
+                        $savedNodes[] = $nodeRecord;
+                        $insertedRecords['sensor_node_data']++;
+                    } catch (\Exception $e) {
+                        Log::error("Error inserting sensor_node_data #$index: " . $e->getMessage());
+                        throw $e;
+                    }
+                }
+
+                Log::info("Inserted {$insertedRecords['sensor_node_data']} node records");
             }
 
+            // Commit transaksi
             DB::commit();
+            Log::info("Transaction committed successfully");
+
+            // =====================================================
+            // FORMAT RESPONSE
+            // =====================================================
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sensor data stored successfully',
+                'message' => 'Data berhasil disimpan',
+                'timestamp' => now()->toIso8601String(),
                 'data' => [
                     'getdata_log' => [
                         'id' => $getDataLog->id,
@@ -638,24 +709,26 @@ class GetDataLogController extends Controller
                         'node_sukses' => $getDataLog->node_sukses,
                         'node_gagal' => $getDataLog->node_gagal,
                     ],
-                    'sensor_weather_data' => [
-                        'id' => $weatherData->id,
-                        'sesi_id_getdata' => $weatherData->sesi_id_getdata,
-                        'node_id' => $weatherData->node_id,
-                        'voltage' => $weatherData->voltage,
-                        'current' => $weatherData->current,
-                        'power' => $weatherData->power,
-                        'light' => $weatherData->light,
-                        'rain' => $weatherData->rain,
-                        'rain_adc' => $weatherData->rain_adc,
-                        'wind' => $weatherData->wind,
-                        'wind_pulse' => $weatherData->wind_pulse,
-                        'humidity' => $weatherData->humidity,
-                        'temp_dht' => $weatherData->temp_dht,
-                        'rssi' => $weatherData->rssi,
-                        'snr' => $weatherData->snr,
-                        'signal_quality' => $weatherData->signal_quality,
-                    ],
+                    'sensor_weather_data' => collect($savedWeatherData)->map(function ($weather) {
+                        return [
+                            'id' => $weather->id,
+                            'sesi_id_getdata' => $weather->sesi_id_getdata,
+                            'node_id' => $weather->node_id,
+                            'voltage' => $weather->voltage,
+                            'current' => $weather->current,
+                            'power' => $weather->power,
+                            'light' => $weather->light,
+                            'rain' => $weather->rain,
+                            'rain_adc' => $weather->rain_adc,
+                            'wind' => $weather->wind,
+                            'wind_pulse' => $weather->wind_pulse,
+                            'humidity' => $weather->humidity,
+                            'temp_dht' => $weather->temp_dht,
+                            'rssi' => $weather->rssi,
+                            'snr' => $weather->snr,
+                            'signal_quality' => $weather->signal_quality,
+                        ];
+                    }),
                     'sensor_node_data' => collect($savedNodes)->map(function ($node) {
                         return [
                             'id' => $node->id,
@@ -673,31 +746,17 @@ class GetDataLogController extends Controller
                             'received_at' => $node->received_at,
                         ];
                     }),
-                    'summary' => [
-                        'weather_data_saved' => 1,
-                        'node_data_saved' => count($savedNodes),
-                    ]
+                    'inserted_records' => $insertedRecords,
+                    'total_inserted' => array_sum($insertedRecords)
                 ]
             ], 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-
-            // Log validation errors
-            Log::error('Validation Error:', [
-                'errors' => $e->errors(),
-                'request' => $request->all()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $e->errors(),
-                'request_data' => $request->all() // Untuk debugging
-            ], 422);
         } catch (\Exception $e) {
-            DB::rollBack();
+            // Rollback jika ada error
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+                Log::warning("Transaction rolled back");
+            }
 
-            // Log general errors
             Log::error('Storage Error:', [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
@@ -707,10 +766,10 @@ class GetDataLogController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to store sensor data',
+                'message' => 'Gagal menyimpan data',
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'file' => basename($e->getFile())
             ], 500);
         }
     }
