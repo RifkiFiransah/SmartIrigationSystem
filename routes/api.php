@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\DataTransferController;
 use App\Http\Controllers\Api\IrrigationController;
 use App\Http\Controllers\Api\DeviceUsageController;
 use App\Http\Controllers\Api\GetDataLogController;
+use App\Http\Controllers\Api\NodeController;
+use App\Http\Controllers\Api\SensorNodeDataController;
 use App\Http\Controllers\Api\SensorWeatherDataController;
 use App\Http\Controllers\Api\WeatherController;
 use App\Http\Controllers\BMKGForecastController;
@@ -15,6 +17,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Device;
 use Carbon\Carbon;
+
+Route::prefix('v1')->group(function () {
+    Route::get('/nodes', [NodeController::class, 'index']);
+    Route::get('/nodes/{id}', [NodeController::class, 'show']);
+    Route::post('/nodes', [NodeController::class, 'store']);
+    Route::put('/nodes/{id}', [NodeController::class, 'update']);
+    Route::delete('/nodes/{id}', [NodeController::class, 'destroy']);
+});
+
+// ===== SENSOR NODE DATA ROUTES =====
+Route::prefix('v1')->group(function () {
+    Route::get('/sensorNodeData', [SensorNodeDataController::class, 'index']);
+    Route::get('/sensorNodeData/{id}', [SensorNodeDataController::class, 'show']);
+    Route::post('/sensorNodeData', [SensorNodeDataController::class, 'store']);
+    Route::put('/sensorNodeData/{id}', [SensorNodeDataController::class, 'update']);
+    Route::delete('/sensorNodeData/{id}', [SensorNodeDataController::class, 'destroy']);
+});
 
 Route::get('/v1/getDataLogs', [GetDataLogController::class, 'index']);
 Route::get('/v1/getDataLogs/{id}', [GetDataLogController::class, 'show']);
