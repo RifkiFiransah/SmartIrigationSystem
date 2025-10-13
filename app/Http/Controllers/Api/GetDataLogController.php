@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GetDataLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GetDataLogController extends Controller
 {
@@ -133,18 +134,18 @@ class GetDataLogController extends Controller
         }
     }
 
-    private function getSignalQuality($rssi, $snr)
-    {
-        if ($rssi > -50 && $snr > 20) {
-            return 'Excellent';
-        } elseif ($rssi >= -70 && $snr >= 15) {
-            return 'Good';
-        } elseif ($rssi >= -90 && $snr >= 10) {
-            return 'Fair';
-        } else {
-            return 'Poor';
-        }
-    }
+    // private function getSignalQuality($rssi, $snr)
+    // {
+    //     if ($rssi > -50 && $snr > 20) {
+    //         return 'Excellent';
+    //     } elseif ($rssi >= -70 && $snr >= 15) {
+    //         return 'Good';
+    //     } elseif ($rssi >= -90 && $snr >= 10) {
+    //         return 'Fair';
+    //     } else {
+    //         return 'Poor';
+    //     }
+    // }
 
     public function getCombinedDatabyIdGetDataLog($id)
     {
@@ -516,6 +517,9 @@ class GetDataLogController extends Controller
     public function storeBulkSensorData(Request $request)
     {
         try {
+            // Log request untuk debugging
+            Log::info('Request Data:', $request->all());
+
             // Validasi request
             $validated = $request->validate([
                 'sesi_id_getdata' => 'required|integer',
@@ -523,19 +527,19 @@ class GetDataLogController extends Controller
                 'waktu_selesai' => 'nullable|date',
                 // Weather data (array dengan 1 objek)
                 'sensor_weather_data' => 'required|array|min:1',
-                'sensor_weather_data.*.node_id' => 'required|integer',
-                'sensor_weather_data.*.voltage' => 'nullable|numeric',
-                'sensor_weather_data.*.current' => 'nullable|numeric',
-                'sensor_weather_data.*.power' => 'nullable|numeric',
-                'sensor_weather_data.*.light' => 'nullable|numeric',
-                'sensor_weather_data.*.rain' => 'nullable|numeric',
-                'sensor_weather_data.*.rain_adc' => 'nullable|integer',
-                'sensor_weather_data.*.wind' => 'nullable|numeric',
-                'sensor_weather_data.*.wind_pulse' => 'nullable|integer',
-                'sensor_weather_data.*.humidity' => 'nullable|numeric',
-                'sensor_weather_data.*.temp_dht' => 'nullable|numeric',
-                'sensor_weather_data.*.rssi' => 'nullable|numeric',
-                'sensor_weather_data.*.snr' => 'nullable|numeric',
+                'sensor_weather_data.0.node_id' => 'required|integer',
+                'sensor_weather_data.0.voltage' => 'nullable|numeric',
+                'sensor_weather_data.0.current' => 'nullable|numeric',
+                'sensor_weather_data.0.power' => 'nullable|numeric',
+                'sensor_weather_data.0.light' => 'nullable|numeric',
+                'sensor_weather_data.0.rain' => 'nullable|numeric',
+                'sensor_weather_data.0.rain_adc' => 'nullable|integer',
+                'sensor_weather_data.0.wind' => 'nullable|numeric',
+                'sensor_weather_data.0.wind_pulse' => 'nullable|integer',
+                'sensor_weather_data.0.humidity' => 'nullable|numeric',
+                'sensor_weather_data.0.temp_dht' => 'nullable|numeric',
+                'sensor_weather_data.0.rssi' => 'nullable|numeric',
+                'sensor_weather_data.0.snr' => 'nullable|numeric',
                 // Node data (array of objects)
                 'sensor_node_data' => 'required|array|min:1',
                 'sensor_node_data.*.node_id' => 'required|integer',
@@ -577,6 +581,11 @@ class GetDataLogController extends Controller
             // Simpan Sensor Weather Data (ambil data pertama dari array)
             $weatherDataInput = $validated['sensor_weather_data'][0];
 
+            // Hitung signal quality
+            $rssi = $weatherDataInput['rssi'] ?? 0;
+            $snr = $weatherDataInput['snr'] ?? 0;
+            $signalQuality = $this->getSignalQuality($rssi, $snr);
+
             $weatherData = \App\Models\SensorWeatherData::create([
                 'sesi_id_getdata' => $validated['sesi_id_getdata'],
                 'node_id' => $weatherDataInput['node_id'],
@@ -590,8 +599,9 @@ class GetDataLogController extends Controller
                 'wind_pulse' => $weatherDataInput['wind_pulse'] ?? null,
                 'humidity' => $weatherDataInput['humidity'] ?? null,
                 'temp_dht' => $weatherDataInput['temp_dht'] ?? null,
-                'rssi' => $weatherDataInput['rssi'] ?? null,
-                'snr' => $weatherDataInput['snr'] ?? null,
+                'rssi' => $rssi,
+                'snr' => $snr,
+                'signal_quality' => $signalQuality,
             ]);
 
             // Simpan Sensor Node Data (multiple data)
@@ -644,7 +654,7 @@ class GetDataLogController extends Controller
                         'temp_dht' => $weatherData->temp_dht,
                         'rssi' => $weatherData->rssi,
                         'snr' => $weatherData->snr,
-                        'signal_quality' => $this->getSignalQuality($weatherData->rssi ?? 0, $weatherData->snr ?? 0),
+                        'signal_quality' => $weatherData->signal_quality,
                     ],
                     'sensor_node_data' => collect($savedNodes)->map(function ($node) {
                         return [
@@ -671,13 +681,30 @@ class GetDataLogController extends Controller
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
+
+            // Log validation errors
+            Log::error('Validation Error:', [
+                'errors' => $e->errors(),
+                'request' => $request->all()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
+                'request_data' => $request->all() // Untuk debugging
             ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // Log general errors
+            Log::error('Storage Error:', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to store sensor data',
@@ -685,6 +712,58 @@ class GetDataLogController extends Controller
                 'line' => $e->getLine(),
                 'file' => $e->getFile()
             ], 500);
+        }
+    }
+
+    /**
+     * Hitung kualitas sinyal berdasarkan RSSI dan SNR
+     */
+    private function getSignalQuality($rssi, $snr)
+    {
+        $rssi = (float) $rssi;
+        $snr = (float) $snr;
+
+        $rssiScore = 0;
+        $snrScore = 0;
+
+        // Skor RSSI
+        if ($rssi > -50) {
+            $rssiScore = 5;
+        } elseif ($rssi > -60) {
+            $rssiScore = 4;
+        } elseif ($rssi > -70) {
+            $rssiScore = 3;
+        } elseif ($rssi > -80) {
+            $rssiScore = 2;
+        } else {
+            $rssiScore = 1;
+        }
+
+        // Skor SNR
+        if ($snr > 20) {
+            $snrScore = 5;
+        } elseif ($snr > 15) {
+            $snrScore = 4;
+        } elseif ($snr > 10) {
+            $snrScore = 3;
+        } elseif ($snr > 5) {
+            $snrScore = 2;
+        } else {
+            $snrScore = 1;
+        }
+
+        $averageScore = ($rssiScore + $snrScore) / 2;
+
+        if ($averageScore >= 4.5) {
+            return 'Excellent';
+        } elseif ($averageScore >= 3.5) {
+            return 'Good';
+        } elseif ($averageScore >= 2.5) {
+            return 'Fair';
+        } elseif ($averageScore >= 1.5) {
+            return 'Weak';
+        } else {
+            return 'Very Weak';
         }
     }
 }
