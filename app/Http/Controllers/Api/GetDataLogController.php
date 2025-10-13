@@ -7,6 +7,22 @@ use Illuminate\Http\Request;
 
 class GetDataLogController extends Controller
 {
+    public function getCombinedData()
+    {
+        try {
+            $logs = GetDataLog::with(['sensorNodeData', 'sensorWeatherData'])->orderBy('waktu_mulai', 'desc')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $logs
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function index()
     {
         try {
