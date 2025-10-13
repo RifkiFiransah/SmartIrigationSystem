@@ -291,27 +291,27 @@ class GetDataLogController extends Controller
     public function storeBulkSensorData(Request $request)
     {
         try {
-            // Validasi request
+            // Validasi request - perbaiki validasi untuk sensor_weather_data
             $validated = $request->validate([
                 'sesi_id_getdata' => 'required|integer',
                 'waktu_mulai' => 'required|date',
                 'waktu_selesai' => 'nullable|date',
 
-                // Weather data (single object)
+                // Weather data (single object) - Ubah validasi
                 'sensor_weather_data' => 'required|array',
-                'sensor_weather_data.node_id' => 'required|integer',
-                'sensor_weather_data.voltage' => 'nullable|numeric',
-                'sensor_weather_data.current' => 'nullable|numeric',
-                'sensor_weather_data.power' => 'nullable|numeric',
-                'sensor_weather_data.light' => 'nullable|numeric',
-                'sensor_weather_data.rain' => 'nullable|numeric',
-                'sensor_weather_data.rain_adc' => 'nullable|integer',
-                'sensor_weather_data.wind' => 'nullable|numeric',
-                'sensor_weather_data.wind_pulse' => 'nullable|integer',
-                'sensor_weather_data.humidity' => 'nullable|numeric',
-                'sensor_weather_data.temp_dht' => 'nullable|numeric',
-                'sensor_weather_data.rssi' => 'nullable|numeric',
-                'sensor_weather_data.snr' => 'nullable|numeric',
+                'sensor_weather_data.*.node_id' => 'required|integer',
+                'sensor_weather_data.*.voltage' => 'nullable|numeric',
+                'sensor_weather_data.*.current' => 'nullable|numeric',
+                'sensor_weather_data.*.power' => 'nullable|numeric',
+                'sensor_weather_data.*.light' => 'nullable|numeric',
+                'sensor_weather_data.*.rain' => 'nullable|numeric',
+                'sensor_weather_data.*.rain_adc' => 'nullable|integer',
+                'sensor_weather_data.*.wind' => 'nullable|numeric',
+                'sensor_weather_data.*.wind_pulse' => 'nullable|integer',
+                'sensor_weather_data.*.humidity' => 'nullable|numeric',
+                'sensor_weather_data.*.temp_dht' => 'nullable|numeric',
+                'sensor_weather_data.*.rssi' => 'nullable|numeric',
+                'sensor_weather_data.*.snr' => 'nullable|numeric',
 
                 // Node data (array of objects)
                 'sensor_node_data' => 'required|array|min:1',
@@ -351,22 +351,24 @@ class GetDataLogController extends Controller
                 ]);
             }
 
-            // Simpan Sensor Weather Data (single data)
+            // Simpan Sensor Weather Data (ambil data pertama dari array)
+            $weatherDataInput = $validated['sensor_weather_data'][0] ?? $validated['sensor_weather_data'];
+
             $weatherData = \App\Models\SensorWeatherData::create([
                 'sesi_id_getdata' => $validated['sesi_id_getdata'],
-                'node_id' => $validated['sensor_weather_data']['node_id'],
-                'voltage' => $validated['sensor_weather_data']['voltage'] ?? null,
-                'current' => $validated['sensor_weather_data']['current'] ?? null,
-                'power' => $validated['sensor_weather_data']['power'] ?? null,
-                'light' => $validated['sensor_weather_data']['light'] ?? null,
-                'rain' => $validated['sensor_weather_data']['rain'] ?? null,
-                'rain_adc' => $validated['sensor_weather_data']['rain_adc'] ?? null,
-                'wind' => $validated['sensor_weather_data']['wind'] ?? null,
-                'wind_pulse' => $validated['sensor_weather_data']['wind_pulse'] ?? null,
-                'humidity' => $validated['sensor_weather_data']['humidity'] ?? null,
-                'temp_dht' => $validated['sensor_weather_data']['temp_dht'] ?? null,
-                'rssi' => $validated['sensor_weather_data']['rssi'] ?? null,
-                'snr' => $validated['sensor_weather_data']['snr'] ?? null,
+                'node_id' => $weatherDataInput['node_id'],
+                'voltage' => $weatherDataInput['voltage'] ?? null,
+                'current' => $weatherDataInput['current'] ?? null,
+                'power' => $weatherDataInput['power'] ?? null,
+                'light' => $weatherDataInput['light'] ?? null,
+                'rain' => $weatherDataInput['rain'] ?? null,
+                'rain_adc' => $weatherDataInput['rain_adc'] ?? null,
+                'wind' => $weatherDataInput['wind'] ?? null,
+                'wind_pulse' => $weatherDataInput['wind_pulse'] ?? null,
+                'humidity' => $weatherDataInput['humidity'] ?? null,
+                'temp_dht' => $weatherDataInput['temp_dht'] ?? null,
+                'rssi' => $weatherDataInput['rssi'] ?? null,
+                'snr' => $weatherDataInput['snr'] ?? null,
             ]);
 
             // Simpan Sensor Node Data (multiple data)
